@@ -8,6 +8,7 @@ import (
 	"github.com/mccanne/zq/pkg/zsio/raw"
 	"github.com/mccanne/zq/pkg/zsio/table"
 	"github.com/mccanne/zq/pkg/zsio/zeek"
+	"github.com/mccanne/zq/pkg/zsio/zjson"
 	"github.com/mccanne/zq/pkg/zson"
 	"github.com/mccanne/zq/pkg/zson/resolver"
 )
@@ -22,6 +23,8 @@ func LookupWriter(format string, w io.WriteCloser) zson.WriteCloser {
 		return ndjson.NewWriter(w)
 	case "json":
 		return json.NewWriter(w)
+	case "zjson":
+		return zjson.NewWriter(w)
 		/* XXX not yet
 		case "text":
 			return text.NewWriter(f, c.showTypes, c.showFields, c.epochDates)
