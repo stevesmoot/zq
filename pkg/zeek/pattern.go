@@ -46,7 +46,7 @@ func (p *Pattern) String() string {
 	return p.Native.String()
 }
 
-func (p *Pattern) TextZval() []byte {
+func (p *Pattern) Encoding() []byte {
 	return []byte(p.String())
 }
 

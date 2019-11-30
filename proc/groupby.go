@@ -366,9 +366,9 @@ func (g *GroupByAggregator) recordsForTable(table map[string]*GroupByRow) []*zso
 				// a reducer value is never a container
 				v := reducer.Result(red)
 				if zeek.IsContainer(v) {
-					panic("reducer result is container!")
+					panic("internal bug: reducer result cannot be a container!")
 				}
-				zv = zval.AppendValue(zv, v.TextZval())
+				zv = zval.AppendValue(zv, v.Encoding())
 			}
 			d := g.lookupDescriptor(row)
 			r := zson.NewRecord(d, row.ts, zv)

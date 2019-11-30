@@ -56,7 +56,7 @@ func (a *Addr) Type() Type {
 	return TypeAddr
 }
 
-func (a *Addr) TextZval() []byte {
+func (a *Addr) Encoding() []byte {
 	return []byte(a.Native.String())
 }
 

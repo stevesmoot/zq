@@ -80,7 +80,7 @@ func (s *Subnet) String() string {
 	return s.Native.String()
 }
 
-func (s *Subnet) TextZval() []byte {
+func (s *Subnet) Encoding() []byte {
 	return []byte(s.String())
 }
 

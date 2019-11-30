@@ -144,10 +144,10 @@ func (r *Record) String() string {
 	return d
 }
 
-func (r *Record) TextZval() []byte {
+func (r *Record) Encoding() []byte {
 	var zv zval.Encoding
 	for _, v := range r.values {
-		zv = zval.Append(zv, v.TextZval(), IsContainer(v))
+		zv = zval.Append(zv, v.Encoding(), IsContainer(v))
 	}
 	return zv
 }

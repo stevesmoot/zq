@@ -46,7 +46,7 @@ func (p *Port) Type() Type {
 	return TypePort
 }
 
-func (p *Port) TextZval() []byte {
+func (p *Port) Encoding() []byte {
 	return []byte(p.String())
 }
 

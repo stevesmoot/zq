@@ -59,7 +59,7 @@ func (r *Row) Result(table *resolver.Table) *zson.Record {
 	for k, red := range r.Reducers {
 		val := reducer.Result(red)
 		columns[k] = zeek.Column{Name: r.Defs[k].Target(), Type: val.Type()}
-		zv = zval.Append(zv, val.TextZval(), zeek.IsContainer(val))
+		zv = zval.Append(zv, val.Encoding(), zeek.IsContainer(val))
 	}
 	d := table.GetByColumns(columns)
 	//XXX fix ts=0.  there should be NewRecord and NewRecordWithTs

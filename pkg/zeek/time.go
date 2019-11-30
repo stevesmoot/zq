@@ -47,7 +47,7 @@ func (t *Time) String() string {
 	return t.Native.StringFloat()
 }
 
-func (t *Time) TextZval() []byte {
+func (t *Time) Encoding() []byte {
 	return []byte(t.String())
 }
 

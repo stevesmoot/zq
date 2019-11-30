@@ -44,7 +44,7 @@ type Value interface {
 	// return an empty list and false.
 	Elements() ([]Value, bool)
 
-	TextZval() []byte
+	Encoding() []byte
 }
 
 // Parse translates an ast.TypedValue into a zeek.Value.

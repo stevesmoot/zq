@@ -37,7 +37,7 @@ func (e *Enum) String() string {
 	return e.Native
 }
 
-func (e *Enum) TextZval() []byte {
+func (e *Enum) Encoding() []byte {
 	return []byte(e.String())
 }
 

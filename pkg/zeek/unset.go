@@ -37,7 +37,7 @@ func (u *Unset) String() string {
 	return "-"
 }
 
-func (u *Unset) TextZval() []byte {
+func (u *Unset) Encoding() []byte {
 	return make([]byte, 0)
 }
 

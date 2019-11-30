@@ -73,10 +73,10 @@ func (v *Vector) String() string {
 	return s
 }
 
-func (v *Vector) TextZval() []byte {
+func (v *Vector) Encoding() []byte {
 	var zv zval.Encoding
 	for _, val := range v.values {
-		zv = zval.Append(zv, val.TextZval(), IsContainer(val))
+		zv = zval.Append(zv, val.Encoding(), IsContainer(val))
 	}
 	return zv
 }

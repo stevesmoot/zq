@@ -52,7 +52,7 @@ func (d *Double) String() string {
 	return strconv.FormatFloat(d.Native, 'g', -1, 64)
 }
 
-func (d *Double) TextZval() []byte {
+func (d *Double) Encoding() []byte {
 	return []byte(d.String())
 }
 

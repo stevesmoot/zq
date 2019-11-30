@@ -45,7 +45,7 @@ func (s *String) String() string {
 	return s.Native
 }
 
-func (s *String) TextZval() []byte {
+func (s *String) Encoding() []byte {
 	return []byte(s.String())
 }
 

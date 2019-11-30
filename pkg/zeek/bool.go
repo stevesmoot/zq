@@ -71,7 +71,7 @@ func (b *Bool) String() string {
 	return strconv.FormatBool(b.Native)
 }
 
-func (b *Bool) TextZval() []byte {
+func (b *Bool) Encoding() []byte {
 	return []byte(b.String())
 }
 

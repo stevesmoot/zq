@@ -28,7 +28,7 @@ func (n *None) String() string {
 	return "none"
 }
 
-func (n *None) TextZval() []byte {
+func (n *None) Encoding() []byte {
 	return []byte("none")
 }
 

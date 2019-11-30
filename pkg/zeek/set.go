@@ -89,10 +89,10 @@ func (s *Set) String() string {
 	return d
 }
 
-func (s *Set) TextZval() []byte {
+func (s *Set) Encoding() []byte {
 	var zv zval.Encoding
 	for _, v := range s.values {
-		zv = zval.Append(zv, v.TextZval(), IsContainer(v))
+		zv = zval.Append(zv, v.Encoding(), IsContainer(v))
 	}
 	return zv
 }

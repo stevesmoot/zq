@@ -52,7 +52,7 @@ func (i *Int) String() string {
 	return strconv.FormatInt(i.Native, 10)
 }
 
-func (i *Int) TextZval() []byte {
+func (i *Int) Encoding() []byte {
 	return []byte(i.String())
 }
 
