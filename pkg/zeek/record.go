@@ -145,11 +145,11 @@ func (r *Record) String() string {
 }
 
 func (r *Record) TextZval() []byte {
-	var vals [][]byte
+	var zv zval.Encoding
 	for _, v := range r.values {
-		vals = append(vals, v.TextZval())
+		zv = zval.Append(zv, v.TextZval(), IsContainer(v))
 	}
-	return zval.AppendContainer(nil, vals)
+	return zv
 }
 
 func (r *Record) Type() Type {

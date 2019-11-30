@@ -90,11 +90,11 @@ func (s *Set) String() string {
 }
 
 func (s *Set) TextZval() []byte {
-	var vals [][]byte
+	var zv zval.Encoding
 	for _, v := range s.values {
-		vals = append(vals, v.TextZval())
+		zv = zval.Append(zv, v.TextZval(), IsContainer(v))
 	}
-	return zval.AppendContainer(nil, vals)
+	return zv
 }
 
 func (s *Set) Type() Type {

@@ -13,6 +13,7 @@ package zval
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 )
 
 var (
@@ -83,6 +84,17 @@ func AppendContainer(dst Encoding, vals [][]byte) Encoding {
 	return dst
 }
 
+// AppendContainerValue takes an Encoding that is encoded as a list of Encodings
+// and concatenates it as a container Encoding.
+func AppendContainerValue(dst Encoding, val Encoding) Encoding {
+	if val == nil {
+		return AppendUvarint(dst, containerTagUnset)
+	}
+	dst = AppendUvarint(dst, containerTag(len(val)))
+	dst = append(dst, val...)
+	return dst
+}
+
 // AppendValue encodes the byte slice as value Encoding, appends it
 // to dst, and returns appended Encoding.
 func AppendValue(dst Encoding, val []byte) Encoding {
@@ -91,6 +103,15 @@ func AppendValue(dst Encoding, val []byte) Encoding {
 	}
 	dst = AppendUvarint(dst, valueTag(len(val)))
 	return append(dst, val...)
+}
+
+func Append(dst Encoding, val []byte, container bool) Encoding {
+	if container {
+		fmt.Println("APPEND CONTAINER", len(val))
+		return AppendContainerValue(dst, val)
+	}
+	fmt.Println("APPEND VALUE", len(val))
+	return AppendValue(dst, val)
 }
 
 // AppendUvarint is like encoding/binary.PutUvarint but appends to dst instead

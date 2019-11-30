@@ -76,3 +76,8 @@ func parseContainer(containerType Type, elementType Type, b []byte) ([]Value, er
 	}
 	return vals, nil
 }
+
+func IsContainer(v Value) bool {
+	_, ok := v.Elements()
+	return ok
+}

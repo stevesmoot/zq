@@ -194,6 +194,15 @@ func ContainedType(typ Type) Type {
 	}
 }
 
+func IsContainerType(typ Type) bool {
+	switch typ.(type) {
+	case *TypeSet, *TypeVector, *TypeRecord:
+		return true
+	default:
+		return false
+	}
+}
+
 func trimInnerTypes(typ string, raw string) string {
 	// XXX handle white space, "set [..."... ?
 	innerTypes := strings.TrimPrefix(raw, typ+"[")

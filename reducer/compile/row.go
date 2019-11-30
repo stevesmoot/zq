@@ -4,6 +4,7 @@ import (
 	"github.com/mccanne/zq/pkg/zeek"
 	"github.com/mccanne/zq/pkg/zson"
 	"github.com/mccanne/zq/pkg/zson/resolver"
+	"github.com/mccanne/zq/pkg/zval"
 	"github.com/mccanne/zq/reducer"
 )
 
@@ -43,6 +44,9 @@ func (r *Row) Consume(rec *zson.Record) {
 	}
 }
 
+// XXX steve update comment and check that we handle different types ...?
+//  this isn't the same issue as group-by
+
 // Result creates a new record from the results of the reducers.
 // XXX this should use the forthcoming zson.Record fields "Values" and
 // not bother with making raw
@@ -51,13 +55,13 @@ func (r *Row) Result(table *resolver.Table) *zson.Record {
 	columns := make([]zeek.Column, n)
 	//XXX fix this logic here.  we just need to add Value columns and the
 	//output layer will lookup descriptor, rebuild raw, insert _td (later PR)
-	values := make([]string, n)
+	var zv zval.Encoding
 	for k, red := range r.Reducers {
-		zv := reducer.Result(red)
-		columns[k] = zeek.Column{Name: r.Defs[k].Target(), Type: zv.Type()}
-		values[k] = zv.String()
+		val := reducer.Result(red)
+		columns[k] = zeek.Column{Name: r.Defs[k].Target(), Type: val.Type()}
+		zv = zval.Append(zv, val.TextZval(), zeek.IsContainer(val))
 	}
 	d := table.GetByColumns(columns)
-	rec, _ := zson.NewRecordZeekStrings(d, values...) //XXX
-	return rec
+	//XXX fix ts=0.  there should be NewRecord and NewRecordWithTs
+	return zson.NewRecord(d, 0, zv)
 }

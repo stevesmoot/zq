@@ -74,11 +74,11 @@ func (v *Vector) String() string {
 }
 
 func (v *Vector) TextZval() []byte {
-	var vals [][]byte
+	var zv zval.Encoding
 	for _, val := range v.values {
-		vals = append(vals, val.TextZval())
+		zv = zval.Append(zv, val.TextZval(), IsContainer(val))
 	}
-	return zval.AppendContainer(nil, vals)
+	return zv
 }
 
 func (v *Vector) Type() Type {

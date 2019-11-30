@@ -3,6 +3,7 @@ package proc
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/mccanne/zq/ast"
@@ -80,6 +81,11 @@ type GroupBy struct {
 	agg        *GroupByAggregator
 }
 
+type rowKey struct {
+	zeek.Type
+	zval.Encoding
+}
+
 // GroupByAggregator performs the core aggregation computation for a
 // list of reducer generators. It handles both regular and time-binned
 // ("every") group-by operations.  Records are generated in a
@@ -87,13 +93,14 @@ type GroupBy struct {
 // by time-binning are partially ordered by timestamp coincident with
 // search direction.
 type GroupByAggregator struct {
-	keyCols        []zeek.Column
-	staticCols     []zeek.Column
-	consumeCutDest []zval.Encoding // Reduces memory allocations in Consume.
-	consumeKeyBuf  []byte          // Reduces memory allocations in Consume.
-	dt             *resolver.Table
-	keys           []GroupByKey
-	reducerDefs    []compile.CompiledReducer
+	keyCols      []zeek.Column
+	staticCols   []zeek.Column
+	typeCols     map[string][]rowKey
+	cacheRowKeys []rowKey // Reduces memory allocations in Consume.
+	cacheKey     []byte   // Reduces memory allocations in Consume.
+	dt           *resolver.Table
+	keys         []GroupByKey
+	reducerDefs  []compile.CompiledReducer
 	// For a regular group-by, tables has one entry with key 0.  For a
 	// time-binned group-by, tables has one entry per bin and is keyed by
 	// bin timestamp (so that a bin with span [ts, ts+timeBinDuration) has
@@ -106,7 +113,7 @@ type GroupByAggregator struct {
 }
 
 type GroupByRow struct {
-	keyVals []zeek.Value
+	rowKeys []rowKey
 	ts      nano.Ts
 	columns compile.Row
 }
@@ -126,6 +133,7 @@ func NewGroupByAggregator(c *Context, params GroupByParams) *GroupByAggregator {
 		keys:            params.keys,
 		dt:              c.Resolver,
 		reducerDefs:     params.reducers,
+		typeCols:        make(map[string][]rowKey),
 		tables:          make(map[nano.Ts]map[string]*GroupByRow),
 		TimeBinDuration: dur,
 		reverse:         c.Reverse,
@@ -176,31 +184,40 @@ func (g *GroupBy) Pull() (zson.Batch, error) {
 	}
 }
 
-func (g *GroupByAggregator) createRow(ts nano.Ts, columns []zeek.Column, zvals []zval.Encoding) *GroupByRow {
+func typeKey(rowkeys []rowKey) string {
+	var b strings.Builder
+	for _, rowkey := range rowkeys {
+		b.WriteString(rowkey.Type.String())
+		b.WriteString(";")
+	}
+	return b.String()
+}
+
+func (g *GroupByAggregator) createRow(ts nano.Ts, rowkeys []rowKey) *GroupByRow {
 	// Make a deep copy so the caller can reuse the underlying arrays.
-	vals := make([]zeek.Value, len(zvals))
-	for k, v := range zvals {
-		if v != nil {
-			//XXX check for err
-			vals[k], _ = columns[k].Type.New(zvals[k])
-		}
+	v := make([]rowKey, len(rowkeys))
+	copy(v, rowkeys)
+	key := typeKey(v)
+	_, ok := g.typeCols[key]
+	if !ok {
+		g.typeCols[key] = v
 	}
 	return &GroupByRow{
-		keyVals: vals,
+		rowKeys: v,
 		ts:      ts,
 		columns: compile.Row{Defs: g.reducerDefs},
 	}
 }
 
-func (g *GroupByAggregator) key(key []byte, columns []zeek.Column, vals []zval.Encoding) ([]byte, error) {
-	if len(vals) > 0 {
-		s, err := zson.Splat(columns[0].Type, vals[0])
-		if err != nil {
-			return nil, err
+func (g *GroupByAggregator) key(key []byte, rowkeys []rowKey) ([]byte, error) {
+	if len(rowkeys) > 0 {
+		key = append(key, rowkeys[0].Type.String()...)
+		for _, rowkey := range rowkeys[1:] {
+			key = append(key, ':')
+			key = append(key, rowkey.Type.String()...)
 		}
-		key = append(key, s...)
-		for i, v := range vals[1:] {
-			s, err := zson.Splat(columns[i+1].Type, v)
+		for _, rowkey := range rowkeys {
+			s, err := zson.Splat(rowkey.Type, rowkey.Encoding)
 			if err != nil {
 				return nil, err
 			}
@@ -217,35 +234,31 @@ func (g *GroupByAggregator) key(key []byte, columns []zeek.Column, vals []zval.E
 func (g *GroupByAggregator) Consume(r *zson.Record) error {
 	// Extract the list of groupby expressions.  Re-use the array
 	// stored in consumeCutDest to avoid re-allocating on every record.
-	var vals []zval.Encoding
-	if g.consumeCutDest != nil {
-		vals = g.consumeCutDest[:0]
+	var rowkeys []rowKey
+	if g.cacheRowKeys != nil {
+		rowkeys = g.cacheRowKeys[:0]
 	}
 	for _, key := range g.keys {
-		_, v := key.resolver(r)
-		if v != nil {
-			vals = append(vals, v)
+		typ, val := key.resolver(r)
+		if val != nil {
+			rowkeys = append(rowkeys, rowKey{typ, val})
 		}
 	}
-	g.consumeCutDest = vals
+	g.cacheRowKeys = rowkeys
 
-	if len(vals) != len(g.keys) {
+	if len(rowkeys) != len(g.keys) {
 		// This record does not have all the group-by fields, so ignore
 		// it.  XXX Maybe we should include it with missing vals = nil.
 		return nil
 	}
-	if g.staticCols == nil {
-		g.initStaticCols(r)
-	}
-
 	// See if we've encountered this combo before.
 	// If so, update the state of each probe attached to the row.
 	// Otherwise, create a new row and create new probe state.
-	key, err := g.key(g.consumeKeyBuf[:0], g.keyCols, vals)
+	key, err := g.key(g.cacheKey[:0], rowkeys)
 	if err != nil {
 		return err
 	}
-	g.consumeKeyBuf = key
+	g.cacheKey = key
 
 	var ts nano.Ts
 	if g.TimeBinDuration > 0 {
@@ -262,7 +275,7 @@ func (g *GroupByAggregator) Consume(r *zson.Record) error {
 		if len(table) >= g.limit {
 			return errTooBig(g.limit)
 		}
-		row = g.createRow(ts, g.keyCols, vals)
+		row = g.createRow(ts, rowkeys)
 		table[string(key)] = row
 	}
 	row.columns.Consume(r)
@@ -313,6 +326,18 @@ func (g *GroupByAggregator) Results(eof bool, minTs nano.Ts, maxTs nano.Ts) zson
 	return zson.NewArray(recs, span)
 }
 
+func typeMatch(typeCol []rowKey, rowkeys []rowKey) bool {
+	if len(typeCol) != len(rowkeys) {
+		return false
+	}
+	for k, rowkey := range rowkeys {
+		if rowkey.Type != typeCol[k].Type {
+			return false
+		}
+	}
+	return true
+}
+
 // recordsForTable returns a slice of records with one record per table entry in a
 // deterministic but undefined order.
 func (g *GroupByAggregator) recordsForTable(table map[string]*GroupByRow) []*zson.Record {
@@ -322,67 +347,71 @@ func (g *GroupByAggregator) recordsForTable(table map[string]*GroupByRow) []*zso
 	}
 	sort.Strings(keys)
 	var recs []*zson.Record
-	for _, k := range keys {
-		row := table[k]
-		var zv zval.Encoding
-		if g.TimeBinDuration > 0 {
-			zv = zval.AppendValue(zv, []byte(row.ts.StringFloat()))
-		}
-		for _, v := range row.keyVals {
-			// XXX this is super hokey
-			_, ok := v.Elements()
-			if ok {
-				// append the container body
-				//zv = append(zv, v.TextZval()...)
-				zv = append(zv, v.TextZval()...)
-			} else {
-				// wrap the value and append
+
+	for _, typeCol := range g.typeCols {
+		for _, k := range keys {
+			row := table[k]
+			if !typeMatch(typeCol, row.rowKeys) {
+				continue
+			}
+			var zv zval.Encoding
+			if g.TimeBinDuration > 0 {
+				panic("BAR")
+				zv = zval.AppendValue(zv, []byte(row.ts.StringFloat()))
+			}
+			for _, rowkey := range row.rowKeys {
+				zv = zval.Append(zv, rowkey.Encoding, zeek.IsContainerType(rowkey.Type))
+			}
+			for _, red := range row.columns.Reducers {
+				// a reducer value is never a container
+				v := reducer.Result(red)
+				if zeek.IsContainer(v) {
+					panic("reducer result is container!")
+				}
 				zv = zval.AppendValue(zv, v.TextZval())
 			}
+			d := g.lookupDescriptor(row)
+			r := zson.NewRecord(d, row.ts, zv)
+			recs = append(recs, r)
 		}
-		for _, red := range row.columns.Reducers {
-			zv = zval.AppendValue(zv, reducer.Result(red).TextZval())
-		}
-		d := g.lookupDescriptor(&row.columns)
-		r := zson.NewRecord(d, row.ts, zv)
-		recs = append(recs, r)
 	}
 	return recs
 }
 
-func (g *GroupByAggregator) lookupDescriptor(columns *compile.Row) *zson.Descriptor {
-	keyCols := make([]zeek.Column, len(columns.Reducers))
-	for k, red := range columns.Reducers {
-		z := reducer.Result(red)
-		keyCols[k] = zeek.Column{
-			Name: columns.Defs[k].Target(),
-			Type: z.Type(),
-		}
-	}
-	outcols := append(g.staticCols, keyCols...)
-	return g.dt.GetByColumns(outcols)
-}
-
 // initialize the static columns, namely the td, ts (if time-binned), and key columns.
-func (g *GroupByAggregator) initStaticCols(r *zson.Record) {
+func (g *GroupByAggregator) appendColumns(columns []zeek.Column, rowkeys []rowKey, defs compile.Row) []zeek.Column {
 	// This is a little ugly.  We infer the types of the group-by keys by
 	// looking at the types if the keys of the first record we see.  XXX We
 	// might want to check subseuent records to make sure the types don't
 	// change and drop them if they do?  If so, we should have a new method
 	// that combines Cut/CutTypes.
-	ncols := len(g.keys)
+	for k, rowkey := range rowkeys {
+		name := g.reducerDefs[k].Target()
+		columns = append(columns, zeek.Column{Name: name, Type: rowkey.Type})
+	}
+	return columns
+}
+func (g *GroupByAggregator) lookupDescriptor(row *GroupByRow) *zson.Descriptor {
+	n := len(row.columns.Reducers) + len(row.rowKeys)
 	if g.TimeBinDuration > 0 {
-		ncols++
+		n++
 	}
-	cols := make([]zeek.Column, ncols)
+	out := make([]zeek.Column, 0, n)
 	if g.TimeBinDuration > 0 {
-		cols[0] = zeek.Column{Name: "ts", Type: zeek.TypeTime}
+		out = append(out, zeek.Column{Name: "ts", Type: zeek.TypeTime})
 	}
-	keycols := cols[len(cols)-len(g.keys):]
-	for i, key := range g.keys {
-		typ, _ := key.resolver(r)
-		keycols[i] = zeek.Column{Name: key.name, Type: typ}
+	for k, rowkey := range row.rowKeys {
+		out = append(out, zeek.Column{
+			Name: g.keys[k].name,
+			Type: rowkey.Type,
+		})
 	}
-	g.keyCols = keycols
-	g.staticCols = cols
+	for k, red := range row.columns.Reducers {
+		z := reducer.Result(red)
+		out = append(out, zeek.Column{
+			Name: row.columns.Defs[k].Target(),
+			Type: z.Type(),
+		})
+	}
+	return g.dt.GetByColumns(out)
 }
