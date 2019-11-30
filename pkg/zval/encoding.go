@@ -13,7 +13,6 @@ package zval
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
 )
 
 var (
@@ -107,10 +106,8 @@ func AppendValue(dst Encoding, val []byte) Encoding {
 
 func Append(dst Encoding, val []byte, container bool) Encoding {
 	if container {
-		fmt.Println("APPEND CONTAINER", len(val))
 		return AppendContainerValue(dst, val)
 	}
-	fmt.Println("APPEND VALUE", len(val))
 	return AppendValue(dst, val)
 }
 
