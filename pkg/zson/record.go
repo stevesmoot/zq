@@ -158,7 +158,7 @@ func splat(inner zeek.Type, zv zval.Encoding) (string, error) {
 		} else {
 			comma = true
 		}
-		b.WriteString(ZvalToZeekString(inner, val))
+		b.WriteString(ZvalToZeekString(inner, val, false))
 	}
 	b.WriteString("]")
 	return b.String(), nil
@@ -172,7 +172,7 @@ func Splat(typ zeek.Type, zv zval.Encoding) (string, error) {
 	inner := zeek.ContainedType(typ)
 	if inner == nil {
 		//  a container
-		return ZvalToZeekString(typ, zv), nil
+		return ZvalToZeekString(typ, zv, true), nil
 	}
 	s, err := splat(inner, zv)
 	return s, err
@@ -196,7 +196,7 @@ func (r *Record) Strings() ([]string, error) {
 				return nil, err
 			}
 		} else {
-			elem = ZvalToZeekString(col.Type, val)
+			elem = ZvalToZeekString(col.Type, val, false)
 
 		}
 		ss = append(ss, elem)
