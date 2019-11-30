@@ -333,6 +333,7 @@ func (g *GroupByAggregator) recordsForTable(table map[string]*GroupByRow) []*zso
 			_, ok := v.Elements()
 			if ok {
 				// append the container body
+				//zv = append(zv, v.TextZval()...)
 				zv = append(zv, v.TextZval()...)
 			} else {
 				// wrap the value and append

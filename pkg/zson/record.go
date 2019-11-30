@@ -141,7 +141,6 @@ func (r *Record) Bytes() []byte {
 func splat(inner zeek.Type, zv zval.Encoding) (string, error) {
 	comma := false
 	var b strings.Builder
-	b.WriteString("[")
 	it := zval.Iter(zv)
 	for !it.Done() {
 		val, isContainer, err := it.Next()
@@ -158,9 +157,9 @@ func splat(inner zeek.Type, zv zval.Encoding) (string, error) {
 		} else {
 			comma = true
 		}
-		b.WriteString(ZvalToZeekString(inner, val, false))
+		b.WriteString(string(val.Bytes()))
+		//ZvalToZeekString(inner, val, false))
 	}
-	b.WriteString("]")
 	return b.String(), nil
 }
 
@@ -171,7 +170,6 @@ func Splat(typ zeek.Type, zv zval.Encoding) (string, error) {
 	}
 	inner := zeek.ContainedType(typ)
 	if inner == nil {
-		//  a container
 		return ZvalToZeekString(typ, zv, true), nil
 	}
 	s, err := splat(inner, zv)
@@ -197,7 +195,6 @@ func (r *Record) Strings() ([]string, error) {
 			}
 		} else {
 			elem = ZvalToZeekString(col.Type, val, false)
-
 		}
 		ss = append(ss, elem)
 	}
