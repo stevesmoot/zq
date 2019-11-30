@@ -11,6 +11,7 @@ import (
 	"github.com/mccanne/zq/pkg/zeek"
 	"github.com/mccanne/zq/pkg/zson"
 	"github.com/mccanne/zq/pkg/zson/resolver"
+	"github.com/mccanne/zq/pkg/zval"
 	"github.com/mccanne/zq/reducer"
 	"github.com/mccanne/zq/reducer/compile"
 	"go.uber.org/zap"
@@ -88,8 +89,8 @@ type GroupBy struct {
 type GroupByAggregator struct {
 	keyCols        []zeek.Column
 	staticCols     []zeek.Column
-	consumeCutDest [][]byte // Reduces memory allocations in Consume.
-	consumeKeyBuf  []byte   // Reduces memory allocations in Consume.
+	consumeCutDest []zval.Encoding // Reduces memory allocations in Consume.
+	consumeKeyBuf  []byte          // Reduces memory allocations in Consume.
 	dt             *resolver.Table
 	keys           []GroupByKey
 	reducerDefs    []compile.CompiledReducer
@@ -105,7 +106,7 @@ type GroupByAggregator struct {
 }
 
 type GroupByRow struct {
-	keyVals [][]byte
+	keyVals []zeek.Value
 	ts      nano.Ts
 	columns compile.Row
 }
@@ -175,19 +176,39 @@ func (g *GroupBy) Pull() (zson.Batch, error) {
 	}
 }
 
-func (g *GroupByAggregator) createRow(ts nano.Ts, kvals [][]byte) *GroupByRow {
+func (g *GroupByAggregator) createRow(ts nano.Ts, columns []zeek.Column, zvals []zval.Encoding) *GroupByRow {
 	// Make a deep copy so the caller can reuse the underlying arrays.
-	kvals = append(make([][]byte, 0, len(kvals)), kvals...)
-	for k, v := range kvals {
+	vals := make([]zeek.Value, len(zvals))
+	for k, v := range zvals {
 		if v != nil {
-			kvals[k] = append(make([]byte, 0, len(v)), v...)
+			//XXX check for err
+			vals[k], _ = columns[k].Type.New(zvals[k])
 		}
 	}
 	return &GroupByRow{
-		keyVals: kvals,
+		keyVals: vals,
 		ts:      ts,
 		columns: compile.Row{Defs: g.reducerDefs},
 	}
+}
+
+func (g *GroupByAggregator) key(key []byte, columns []zeek.Column, vals []zval.Encoding) ([]byte, error) {
+	if len(vals) > 0 {
+		s, err := zson.Splat(columns[0].Type, vals[0])
+		if err != nil {
+			return nil, err
+		}
+		key = append(key, s...)
+		for i, v := range vals[1:] {
+			s, err := zson.Splat(columns[i+1].Type, v)
+			if err != nil {
+				return nil, err
+			}
+			key = append(key, ':')
+			key = append(key, s...)
+		}
+	}
+	return key, nil
 }
 
 // Consume takes a record and adds it to the aggregation. Records
@@ -220,15 +241,12 @@ func (g *GroupByAggregator) Consume(r *zson.Record) error {
 	// See if we've encountered this combo before.
 	// If so, update the state of each probe attached to the row.
 	// Otherwise, create a new row and create new probe state.
-	key := g.consumeKeyBuf[:0]
-	if len(vals) > 0 {
-		key = append(key, zson.ZvalToZeekString(g.keyCols[0].Type, vals[0], false)...)
-		for i, v := range vals[1:] {
-			key = append(key, ':')
-			key = append(key, zson.ZvalToZeekString(g.keyCols[i+1].Type, v, false)...)
-		}
+	key, err := g.key(g.consumeKeyBuf[:0], g.keyCols, vals)
+	if err != nil {
+		return err
 	}
 	g.consumeKeyBuf = key
+
 	var ts nano.Ts
 	if g.TimeBinDuration > 0 {
 		ts = r.Ts.Trunc(g.TimeBinDuration)
@@ -238,12 +256,13 @@ func (g *GroupByAggregator) Consume(r *zson.Record) error {
 		table = make(map[string]*GroupByRow)
 		g.tables[ts] = table
 	}
+	//XXX use unsafe here to avoid sending all the string keys to GC
 	row, ok := table[string(key)]
 	if !ok {
 		if len(table) >= g.limit {
 			return errTooBig(g.limit)
 		}
-		row = g.createRow(ts, vals)
+		row = g.createRow(ts, g.keyCols, vals)
 		table[string(key)] = row
 	}
 	row.columns.Consume(r)
@@ -303,29 +322,28 @@ func (g *GroupByAggregator) recordsForTable(table map[string]*GroupByRow) []*zso
 	}
 	sort.Strings(keys)
 	var recs []*zson.Record
-Keys:
 	for _, k := range keys {
 		row := table[k]
-		var vals [][]byte
+		var zv zval.Encoding
 		if g.TimeBinDuration > 0 {
-			vals = append(vals, []byte(row.ts.StringFloat()))
+			zv = zval.AppendValue(zv, []byte(row.ts.StringFloat()))
 		}
 		for _, v := range row.keyVals {
-			vals = append(vals, v)
+			// XXX this is super hokey
+			_, ok := v.Elements()
+			if ok {
+				// append the container body
+				zv = append(zv, v.TextZval()...)
+			} else {
+				// wrap the value and append
+				zv = zval.AppendValue(zv, v.TextZval())
+			}
 		}
 		for _, red := range row.columns.Reducers {
-			v, err := zson.ZvalFromZeekString(nil, reducer.Result(red).String())
-			if err != nil {
-				g.logger.Error("zson.ZvalFromZeekString failed", zap.Error(err))
-				continue Keys
-			}
-			vals = append(vals, v)
+			zv = zval.AppendValue(zv, reducer.Result(red).TextZval())
 		}
 		d := g.lookupDescriptor(&row.columns)
-		r, err := zson.NewRecordZvals(d, vals...)
-		if err != nil {
-			g.logger.Error("zson.NewRecordZvals failed", zap.Error(err))
-		}
+		r := zson.NewRecord(d, row.ts, zv)
 		recs = append(recs, r)
 	}
 	return recs

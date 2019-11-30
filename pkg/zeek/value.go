@@ -43,6 +43,8 @@ type Value interface {
 	// the contained Values and true.  If this value is not a container,
 	// return an empty list and false.
 	Elements() ([]Value, bool)
+
+	TextZval() []byte
 }
 
 // Parse translates an ast.TypedValue into a zeek.Value.

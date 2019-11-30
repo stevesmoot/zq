@@ -7,6 +7,7 @@ import (
 
 	"github.com/mccanne/zq/pkg/zeek"
 	"github.com/mccanne/zq/pkg/zson"
+	"github.com/mccanne/zq/pkg/zval"
 )
 
 var ErrExists = errors.New("descriptor exists with different type")
@@ -118,7 +119,7 @@ func (t *Table) newDescriptor(typ *zeek.TypeRecord, cols ...zeek.Column) *zson.D
 // record is returned.
 func (t *Table) AddColumns(r *zson.Record, cols []zeek.Column, vals []string) (*zson.Record, error) {
 	var newCols []zeek.Column
-	var newVals [][]byte
+	var newVals []zval.Encoding
 	for i, c := range cols {
 		if !r.Descriptor.HasField(c.Name) {
 			v, err := zson.ZvalFromZeekString(c.Type, vals[i])
@@ -132,7 +133,7 @@ func (t *Table) AddColumns(r *zson.Record, cols []zeek.Column, vals []string) (*
 	if len(newCols) == 0 {
 		return r, nil
 	}
-	var oldVals [][]byte
+	var oldVals []zval.Encoding
 	for it := r.ZvalIter(); !it.Done(); {
 		v, _, err := it.Next()
 		if err != nil {
@@ -158,7 +159,7 @@ func (t *Table) CreateCut(r *zson.Record, fields []string) (*zson.Record, uint64
 		columns[k].Name = fields[k]
 		columns[k].Type = types[k]
 	}
-	vals := make([][]byte, 0, 32)
+	vals := make([]zval.Encoding, 0, 32)
 	for _, v := range r.Cut(fields, nil) {
 		vals = append(vals, v)
 	}

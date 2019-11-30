@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"github.com/mccanne/zq/pkg/zval"
 )
 
 type TypeVector struct {
@@ -69,6 +71,14 @@ func (v *Vector) String() string {
 	}
 	s += "]"
 	return s
+}
+
+func (v *Vector) TextZval() []byte {
+	var vals [][]byte
+	for _, val := range v.values {
+		vals = append(vals, val.TextZval())
+	}
+	return zval.AppendContainer(nil, vals)
 }
 
 func (v *Vector) Type() Type {

@@ -45,6 +45,10 @@ func (s *String) String() string {
 	return s.Native
 }
 
+func (s *String) TextZval() []byte {
+	return []byte(s.String())
+}
+
 func (s *String) Type() Type {
 	return TypeString
 }

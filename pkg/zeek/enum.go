@@ -37,6 +37,10 @@ func (e *Enum) String() string {
 	return e.Native
 }
 
+func (e *Enum) TextZval() []byte {
+	return []byte(e.String())
+}
+
 func (e *Enum) Type() Type {
 	return TypeEnum
 }

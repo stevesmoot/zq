@@ -56,6 +56,10 @@ func (a *Addr) Type() Type {
 	return TypeAddr
 }
 
+func (a *Addr) TextZval() []byte {
+	return []byte(a.Native.String())
+}
+
 // Comparison returns a Predicate that compares typed byte slices that must
 // be TypeAddr with the value's address using a comparison based on op.
 // Only equality operands are allowed.

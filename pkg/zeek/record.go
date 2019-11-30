@@ -144,6 +144,14 @@ func (r *Record) String() string {
 	return d
 }
 
+func (r *Record) TextZval() []byte {
+	var vals [][]byte
+	for _, v := range r.values {
+		vals = append(vals, v.TextZval())
+	}
+	return zval.AppendContainer(nil, vals)
+}
+
 func (r *Record) Type() Type {
 	return r.typ
 }

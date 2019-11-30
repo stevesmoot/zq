@@ -71,6 +71,10 @@ func (b *Bool) String() string {
 	return strconv.FormatBool(b.Native)
 }
 
+func (b *Bool) TextZval() []byte {
+	return []byte(b.String())
+}
+
 func (b *Bool) Type() Type {
 	return TypeBool
 }

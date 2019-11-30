@@ -46,6 +46,10 @@ func (p *Port) Type() Type {
 	return TypePort
 }
 
+func (p *Port) TextZval() []byte {
+	return []byte(p.String())
+}
+
 // Comparison returns a Predicate that compares typed byte slices that must
 // be a port with the value's port value using a comparison based on op.
 // Integer fields are not coerced (nor are any other types) so they never

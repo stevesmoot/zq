@@ -47,6 +47,10 @@ func (t *Time) String() string {
 	return t.Native.StringFloat()
 }
 
+func (t *Time) TextZval() []byte {
+	return []byte(t.String())
+}
+
 func (t *Time) Type() Type {
 	return TypeTime
 }

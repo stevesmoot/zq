@@ -37,6 +37,10 @@ func (u *Unset) String() string {
 	return "-"
 }
 
+func (u *Unset) TextZval() []byte {
+	return make([]byte, 0)
+}
+
 func (u *Unset) Type() Type {
 	return TypeUnset
 }

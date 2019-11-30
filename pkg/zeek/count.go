@@ -42,6 +42,10 @@ func (c *Count) String() string {
 	return strconv.FormatUint(c.Native, 10)
 }
 
+func (c *Count) TextZval() []byte {
+	return []byte(c.String())
+}
+
 func (c *Count) Type() Type {
 	return TypeCount
 }

@@ -4,21 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"net"
+	"strings"
 
 	"github.com/mccanne/zq/pkg/nano"
 	"github.com/mccanne/zq/pkg/zeek"
 	"github.com/mccanne/zq/pkg/zval"
-)
-
-// Errors...
-var (
-	ErrNoSuchField = errors.New("no such field")
-
-	ErrCorruptTd = errors.New("corrupt type descriptor")
-
-	ErrCorruptColumns = errors.New("wrong number of columns in record value")
-
-	ErrTypeMismatch = errors.New("type retrieved does not match type requested")
 )
 
 // A Record wraps a zeek.Record and can simultaneously represent its raw
@@ -82,7 +72,7 @@ func NewVolatileRecord(d *Descriptor, ts nano.Ts, raw zval.Encoding) *Record {
 // the record's timestamp.  If the descriptor has no field named ts, the
 // record's timestamp is zero.  NewRecordZvals returns an error if the number of
 // descriptor columns and zvals do not agree or if parsing the ts zval fails.
-func NewRecordZvals(d *Descriptor, vals ...[]byte) (t *Record, err error) {
+func NewRecordZvals(d *Descriptor, vals ...zval.Encoding) (t *Record, err error) {
 	raw, err := NewRawFromZvals(d, vals)
 	if err != nil {
 		return nil, err
@@ -145,15 +135,71 @@ func (r *Record) Bytes() []byte {
 	return r.Raw
 }
 
+// splat formats a set or vector body as a value string.  This isn't
+// a valid zeek string or valid zson but it's useful for things like a
+// group-by key when grouping by a field that has set or vector values.
+func splat(inner zeek.Type, zv zval.Encoding) (string, error) {
+	comma := false
+	var b strings.Builder
+	b.WriteString("[")
+	it := zval.Iter(zv)
+	for !it.Done() {
+		val, isContainer, err := it.Next()
+		if err != nil {
+			return "", err
+		}
+		if isContainer {
+			// Record splats are not allowed and sets/vectors
+			// cannot be inside of anoter container.
+			return "", ErrTypeMismatch
+		}
+		if comma {
+			b.WriteString(",")
+		} else {
+			comma = true
+		}
+		b.WriteString(ZvalToZeekString(inner, val))
+	}
+	b.WriteString("]")
+	return b.String(), nil
+}
+
+func Splat(typ zeek.Type, zv zval.Encoding) (string, error) {
+	_, ok := typ.(*zeek.TypeRecord)
+	if ok {
+		return "", errors.New("zson record values cannot be flattened")
+	}
+	inner := zeek.ContainedType(typ)
+	if inner == nil {
+		//  a container
+		return ZvalToZeekString(typ, zv), nil
+	}
+	s, err := splat(inner, zv)
+	return s, err
+}
+
 func (r *Record) Strings() ([]string, error) {
 	var ss []string
 	it := r.ZvalIter()
 	for _, col := range r.Descriptor.Type.Columns {
+		if it.Done() {
+			return nil, errors.New("record type/value mismatch")
+		}
 		val, isContainer, err := it.Next()
 		if err != nil {
 			return nil, err
 		}
-		ss = append(ss, ZvalToZeekString(col.Type, val, isContainer))
+		var elem string
+		if isContainer {
+			elem, err = splat(col.Type, val)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			elem = ZvalToZeekString(col.Type, val)
+
+		}
+		ss = append(ss, elem)
 	}
 	return ss, nil
 }
@@ -174,7 +220,7 @@ func (r *Record) ValueByField(field string) zeek.Value {
 }
 
 func (r *Record) Slice(column int) []byte {
-	var val []byte
+	var val zval.Encoding
 	for i, it := 0, r.ZvalIter(); i <= column; i++ {
 		if it.Done() {
 			return nil
@@ -185,6 +231,9 @@ func (r *Record) Slice(column int) []byte {
 			return nil
 		}
 	}
+	//if val != nil {
+	//	fmt.Println("SLICE", val.String())
+	//}
 	return val
 }
 
@@ -291,9 +340,9 @@ func (r *Record) AccessTime(field string) (nano.Ts, error) {
 // receiver's Buffer is reclaimed.  If dest's underlying array is large enough,
 // Cut uses it for the returned slice.  Otherwise, a new array is allocated.
 // Cut returns nil if any field is missing from the receiver.
-func (r *Record) Cut(fields []string, dest [][]byte) [][]byte {
+func (r *Record) Cut(fields []string, dest []zval.Encoding) []zval.Encoding {
 	if n := len(fields); cap(dest) < n {
-		dest = make([][]byte, n)
+		dest = make([]zval.Encoding, n)
 	} else {
 		dest = dest[:n]
 	}

@@ -46,6 +46,10 @@ func (p *Pattern) String() string {
 	return p.Native.String()
 }
 
+func (p *Pattern) TextZval() []byte {
+	return []byte(p.String())
+}
+
 func (p *Pattern) Type() Type {
 	return TypePattern
 }

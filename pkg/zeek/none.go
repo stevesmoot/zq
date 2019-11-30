@@ -28,6 +28,10 @@ func (n *None) String() string {
 	return "none"
 }
 
+func (n *None) TextZval() []byte {
+	return []byte("none")
+}
+
 func (n *None) Type() Type {
 	return TypeNone
 }

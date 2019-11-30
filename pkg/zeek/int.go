@@ -52,6 +52,10 @@ func (i *Int) String() string {
 	return strconv.FormatInt(i.Native, 10)
 }
 
+func (i *Int) TextZval() []byte {
+	return []byte(i.String())
+}
+
 func (i *Int) Type() Type {
 	return TypeInt
 }

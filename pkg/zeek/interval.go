@@ -47,6 +47,10 @@ func (i *Interval) String() string {
 	return nano.DurationString(i.Native)
 }
 
+func (i *Interval) TextZval() []byte {
+	return []byte(i.String())
+}
+
 func (i *Interval) Type() Type {
 	return TypeInterval
 }

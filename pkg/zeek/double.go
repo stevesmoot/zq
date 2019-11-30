@@ -52,6 +52,10 @@ func (d *Double) String() string {
 	return strconv.FormatFloat(d.Native, 'g', -1, 64)
 }
 
+func (d *Double) TextZval() []byte {
+	return []byte(d.String())
+}
+
 func (d *Double) Type() Type {
 	return TypeDouble
 }

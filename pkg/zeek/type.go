@@ -31,7 +31,8 @@ var (
 type Type interface {
 	String() string
 	// New returns a Value of this Type by parsing the data in the bye slice
-	// and interpreting it as the native value of the zeek Value.
+	// and interpreting it as the native value of the zeek Value.  For sets
+	// and vectors, the byte slice is a zval.Encoding of the body of a container.
 	New([]byte) (Value, error)
 	// Format returns a native value as an empty interface by parsing the
 	// data in the byte slice as an instance of this Type.  This allows
@@ -182,14 +183,14 @@ func parseType(in string) (string, Type, error) {
 // If the passed-in type is a container, ContainedType() returns
 // the type of individual elements (and true for the second value).
 // Otherwise, returns nil, false.
-func ContainedType(typ Type) (Type, bool) {
+func ContainedType(typ Type) Type {
 	switch typ := typ.(type) {
 	case *TypeSet:
-		return typ.innerType, true
+		return typ.innerType
 	case *TypeVector:
-		return typ.typ, true
+		return typ.typ
 	default:
-		return nil, false
+		return nil
 	}
 }
 

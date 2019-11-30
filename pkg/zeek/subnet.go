@@ -80,6 +80,10 @@ func (s *Subnet) String() string {
 	return s.Native.String()
 }
 
+func (s *Subnet) TextZval() []byte {
+	return []byte(s.String())
+}
+
 func (s *Subnet) Type() Type {
 	return TypeSubnet
 }
