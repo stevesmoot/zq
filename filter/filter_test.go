@@ -3,7 +3,6 @@ package filter_test
 import (
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -155,16 +154,8 @@ func TestFilters(t *testing.T) {
 		{"1 in nested", records[9], false},
 	}
 
-	for k, tt := range tests {
-		if k != 21 {
-			continue
-		}
+	for _, tt := range tests {
 		err := runTest(tt.filter, tt.record, tt.expectedResult)
-		if err != nil {
-			//XXX
-			s, _ := tt.record.ZeekStrings()
-			fmt.Println(tt.filter, s)
-		}
-		require.NoError(t, err, tt.filter, "test index: "+strconv.Itoa(k), records[0])
+		require.NoError(t, err)
 	}
 }
