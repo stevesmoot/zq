@@ -117,11 +117,6 @@ func (r *Record) ZvalIter() zval.Iter {
 	return r.Raw.Iter()
 }
 
-// ZvalIter returns an iterator over the receiver's envelops of zvals.
-func (r *Record) GenVals() zval.IterEncoding {
-	return r.Raw.IterEncoding()
-}
-
 // Width returns the number of columns in the record.
 func (r *Record) Width() int { return len(r.Descriptor.Type.Columns) }
 
