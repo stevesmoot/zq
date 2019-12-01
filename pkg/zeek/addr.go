@@ -77,7 +77,7 @@ func (a *Addr) Comparison(op string) (Predicate, error) {
 		if !ok {
 			return false
 		}
-		ip, err := typeAddr.Parse(e.Encoding.Contents())
+		ip, err := typeAddr.Parse(e.Body)
 		if err != nil {
 			return false
 		}

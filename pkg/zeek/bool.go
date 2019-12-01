@@ -96,7 +96,7 @@ func (b *Bool) Comparison(op string) (Predicate, error) {
 		if !ok {
 			return false
 		}
-		v, err := typeBool.Parse(e.Encoding.Contents())
+		v, err := typeBool.Parse(e.Body)
 		if err != nil {
 			return false
 		}

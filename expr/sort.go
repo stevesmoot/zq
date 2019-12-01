@@ -24,7 +24,7 @@ func bytescompare(a, b []byte, dir int) int {
 }
 
 func rawcompare(a, b zval.Encoding, dir int) int {
-	v := bytes.Compare(a.Contents(), b.Contents())
+	v := bytes.Compare(a.Bytes(), b.Bytes())
 	if v < 0 {
 		return -dir
 	} else {
@@ -63,7 +63,7 @@ func NewSortFn(dir int, fields ...FieldExprResolver) SortFn {
 				sorters[&a.Type] = sf
 			}
 
-			v := sf(a.Encoding, b.Encoding)
+			v := sf(a.Body, b.Body)
 			// If the events don't match, then return the sort
 			// info.  Otherwise, they match and we continue on
 			// on in the loop to the secondary key, etc.
@@ -127,11 +127,11 @@ func lookupSorter(typ zeek.Type, dir int) comparefn {
 		}
 	case zeek.TypeBool:
 		return func(a, b zval.Encoding) int {
-			va, err := zeek.TypeBool.Parse(a.Contents())
+			va, err := zeek.TypeBool.Parse(a)
 			if err != nil {
 				return -dir
 			}
-			vb, err := zeek.TypeBool.Parse(b.Contents())
+			vb, err := zeek.TypeBool.Parse(b)
 			if err != nil {
 				return dir
 			}
@@ -155,11 +155,11 @@ func lookupSorter(typ zeek.Type, dir int) comparefn {
 	// into the different types.
 	case zeek.TypePort, zeek.TypeCount, zeek.TypeInt:
 		return func(a, b zval.Encoding) int {
-			va, err := zeek.TypeInt.Parse(a.Contents())
+			va, err := zeek.TypeInt.Parse(a)
 			if err != nil {
 				return -dir
 			}
-			vb, err := zeek.TypeInt.Parse(b.Contents())
+			vb, err := zeek.TypeInt.Parse(b)
 			if err != nil {
 				return dir
 			}
@@ -173,11 +173,11 @@ func lookupSorter(typ zeek.Type, dir int) comparefn {
 
 	case zeek.TypeDouble:
 		return func(a, b zval.Encoding) int {
-			va, err := zeek.TypeDouble.Parse(a.Contents())
+			va, err := zeek.TypeDouble.Parse(a)
 			if err != nil {
 				return -dir
 			}
-			vb, err := zeek.TypeDouble.Parse(b.Contents())
+			vb, err := zeek.TypeDouble.Parse(b)
 			if err != nil {
 				return dir
 			}
@@ -191,11 +191,11 @@ func lookupSorter(typ zeek.Type, dir int) comparefn {
 
 	case zeek.TypeTime, zeek.TypeInterval:
 		return func(a, b zval.Encoding) int {
-			va, err := zeek.TypeTime.Parse(a.Contents())
+			va, err := zeek.TypeTime.Parse(a)
 			if err != nil {
 				return -dir
 			}
-			vb, err := zeek.TypeTime.Parse(b.Contents())
+			vb, err := zeek.TypeTime.Parse(b)
 			if err != nil {
 				return dir
 			}
@@ -209,11 +209,11 @@ func lookupSorter(typ zeek.Type, dir int) comparefn {
 
 	case zeek.TypeAddr:
 		return func(a, b zval.Encoding) int {
-			va, err := zeek.TypeAddr.Parse(a.Contents())
+			va, err := zeek.TypeAddr.Parse(a)
 			if err != nil {
 				return -dir
 			}
-			vb, err := zeek.TypeAddr.Parse(b.Contents())
+			vb, err := zeek.TypeAddr.Parse(b)
 			if err != nil {
 				return dir
 			}

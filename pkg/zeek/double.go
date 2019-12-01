@@ -73,7 +73,7 @@ func (d *Double) Comparison(op string) (Predicate, error) {
 	}
 	pattern := d.Native
 	return func(e TypedEncoding) bool {
-		val := e.Encoding.Contents()
+		val := e.Body
 		switch typ := e.Type.(type) {
 		// We allow comparison of float constant with integer-y
 		// fields and just use typeDouble to parse since it will do

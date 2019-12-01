@@ -105,7 +105,7 @@ func (s *Subnet) Comparison(op string) (Predicate, error) {
 	}
 	pattern := s.Native
 	return func(e TypedEncoding) bool {
-		val := e.Encoding.Contents()
+		val := e.Body
 		switch e.Type.(type) {
 		case *TypeOfAddr:
 			ip, err := TypeAddr.Parse(val)

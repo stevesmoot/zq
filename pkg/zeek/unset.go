@@ -55,7 +55,7 @@ func (u *Unset) Comparison(op string) (Predicate, error) {
 	return func(e TypedEncoding) bool {
 		switch e.Type.(type) {
 		case *TypeOfString, *TypeOfBool, *TypeOfCount, *TypeOfInt, *TypeOfDouble, *TypeOfTime, *TypeOfInterval, *TypeOfPort, *TypeOfAddr, *TypeOfSubnet, *TypeOfEnum, *TypeSet, *TypeVector:
-			return compare(e.Encoding.Contents())
+			return compare(e.Body)
 		}
 		return false
 	}, nil

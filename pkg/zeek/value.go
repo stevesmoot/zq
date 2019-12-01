@@ -14,8 +14,8 @@ var (
 )
 
 type TypedEncoding struct {
-	Type
-	zval.Encoding
+	Type Type
+	Body zval.Encoding
 }
 
 // A Predicate is a function that takes a Type and a byte slice, parses the

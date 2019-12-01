@@ -71,7 +71,7 @@ func (p *Port) Comparison(op string) (Predicate, error) {
 		if !ok {
 			return false
 		}
-		v, err := typePort.Parse(e.Encoding.Contents())
+		v, err := typePort.Parse(e.Body)
 		if err != nil {
 			return false
 		}

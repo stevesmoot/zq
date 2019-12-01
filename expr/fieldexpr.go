@@ -8,7 +8,6 @@ import (
 	"github.com/mccanne/zq/ast"
 	"github.com/mccanne/zq/pkg/zeek"
 	"github.com/mccanne/zq/pkg/zson"
-	"github.com/mccanne/zq/pkg/zval"
 )
 
 // A FieldExprResolver is a compiled FieldExpr (where FieldExpr is the
@@ -33,7 +32,7 @@ type arrayIndex struct {
 }
 
 func (ai *arrayIndex) apply(e zeek.TypedEncoding) zeek.TypedEncoding {
-	el, err := zeek.VectorIndex(e, ai.idx)
+	el, err := e.VectorIndex(ai.idx)
 	if err != nil {
 		return zeek.TypedEncoding{}
 	}
@@ -57,13 +56,13 @@ func (fr *fieldRead) apply(e zeek.TypedEncoding) zeek.TypedEncoding {
 	for n, col := range recType.Columns {
 		if col.Name == fr.field {
 			var v []byte
-			it := zval.IterEncoding(e.Encoding.Contents())
+			it := e.Iter()
 			for i := 0; i <= n; i++ {
 				if it.Done() {
 					return zeek.TypedEncoding{}
 				}
 				var err error
-				v, err = it.Next()
+				v, _, err = it.Next()
 				if err != nil {
 					return zeek.TypedEncoding{}
 				}
@@ -128,7 +127,7 @@ outer:
 		typ := r.TypeOfColumn(col)
 		val := r.Slice(col)
 		for _, op := range ops {
-			e := op.apply(typ, val.Contents())
+			e := op.apply(zeek.TypedEncoding{typ, val})
 			if e.Type == nil {
 				return zeek.TypedEncoding{}
 			}

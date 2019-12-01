@@ -85,7 +85,7 @@ func (i *Int) Comparison(op string) (Predicate, error) {
 	pattern := i.Native
 	// many different zeek data types can be compared with integers
 	return func(e TypedEncoding) bool {
-		val := e.Encoding.Contents()
+		val := e.Body
 		switch typ := e.Type.(type) {
 		case *TypeOfInt, *TypeOfCount, *TypeOfPort:
 			// we can parse counts and ports as an integer

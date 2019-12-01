@@ -50,7 +50,6 @@ func runTest(valType string, valRaw string, containerType string, containerRaw s
 		return err
 	}
 	fmt.Println(r.Raw.String())
-	fmt.Println(r.Strings())
 	if err != nil {
 		return err
 	}

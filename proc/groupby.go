@@ -212,14 +212,8 @@ func (g *GroupByAggregator) key(key []byte, rowkeys []zeek.TypedEncoding) ([]byt
 			key = append(key, rowkey.Type.String()...)
 		}
 		for _, rowkey := range rowkeys {
-			s, err := zson.Splat(rowkey.Type, rowkey.Encoding)
-			if err != nil {
-				return nil, err
-			}
-			fmt.Println("SPLAT 1", s)
-			fmt.Println("SPLAT 2", rowkey.Encoding.String())
 			key = append(key, ':')
-			key = append(key, s...)
+			key = append(key, rowkey.String()...)
 		}
 	}
 	return key, nil
@@ -237,8 +231,7 @@ func (g *GroupByAggregator) Consume(r *zson.Record) error {
 	}
 	for _, key := range g.keys {
 		rowkey := key.resolver(r)
-		if rowkey.Encoding != nil {
-			fmt.Println("CONSUME SPLAT", rowkey.Encoding.String())
+		if rowkey.Body != nil {
 			rowkeys = append(rowkeys, rowkey)
 		}
 	}
@@ -358,7 +351,7 @@ func (g *GroupByAggregator) recordsForTable(table map[string]*GroupByRow) []*zso
 				zv = zval.AppendValue(zv, []byte(row.ts.StringFloat()))
 			}
 			for _, rowkey := range row.rowKeys {
-				zv = zval.Append(zv, rowkey.Encoding, zeek.IsContainerType(rowkey.Type))
+				zv = zval.Append(zv, rowkey.Body, zeek.IsContainerType(rowkey.Type))
 			}
 			for _, red := range row.columns.Reducers {
 				// a reducer value is never a container

@@ -23,17 +23,17 @@ func TestNewRecordZeekStrings(t *testing.T) {
 	r, err := NewTestRecord(d, "some path", "123.456", "some data")
 	assert.NoError(t, err)
 	assert.EqualValues(t, 123456000000, r.Ts)
-	assert.EqualValues(t, "some path", r.Slice(0).Contents())
-	assert.EqualValues(t, "123.456", r.Slice(1).Contents())
-	assert.EqualValues(t, "some data", r.Slice(2).Contents())
+	assert.EqualValues(t, "some path", r.Slice(0))
+	assert.EqualValues(t, "123.456", r.Slice(1))
+	assert.EqualValues(t, "some data", r.Slice(2))
 	assert.Nil(t, r.Slice(3))
 
 	r, err = NewTestRecord(d, "some path", "123.456", "")
 	assert.NoError(t, err)
 	assert.EqualValues(t, 123456000000, r.Ts)
-	assert.EqualValues(t, "some path", r.Slice(0).Contents())
-	assert.EqualValues(t, "123.456", r.Slice(1).Contents())
-	assert.EqualValues(t, "", r.Slice(2).Contents())
+	assert.EqualValues(t, "some path", r.Slice(0))
+	assert.EqualValues(t, "123.456", r.Slice(1))
+	assert.EqualValues(t, "", r.Slice(2))
 	assert.Nil(t, r.Slice(3))
 }
 
@@ -59,7 +59,7 @@ func esc(s string) []byte {
 
 }
 func z(s string) zval.Encoding {
-	return zval.AppendValue(nil, esc(s))
+	return []byte(s)
 }
 
 func zc(ss ...string) zval.Encoding {
@@ -67,19 +67,19 @@ func zc(ss ...string) zval.Encoding {
 	for _, s := range ss {
 		zv = zval.AppendValue(zv, esc(s))
 	}
-	return zval.Append(nil, zv, true)
+	return zv
 }
 
 func zempty() zval.Encoding {
-	return zval.Append(nil, make([]byte, 0), true)
+	return make(zval.Encoding, 0)
 }
 
 func zunset() zval.Encoding {
-	return zval.Append(nil, nil, false)
+	return nil
 }
 
 func zunsetc() zval.Encoding {
-	return zval.Append(nil, nil, true)
+	return nil
 }
 
 func TestEncodeZeekStrings(t *testing.T) {
@@ -97,28 +97,28 @@ func TestEncodeZeekStrings(t *testing.T) {
 	assert.NoError(t, err)
 	r := NewRecordNoTs(d, zv)
 	assert.EqualValues(t, 123456000000, r.Ts)
-	assert.EqualValues(t, "some path", r.Slice(0).Contents())
-	assert.EqualValues(t, "123.456", r.Slice(1).Contents())
-	assert.EqualValues(t, "some data", r.Slice(2).Contents())
+	assert.EqualValues(t, "some path", r.Slice(0))
+	assert.EqualValues(t, "123.456", r.Slice(1))
+	assert.EqualValues(t, "some data", r.Slice(2))
 	assert.Nil(t, r.Slice(3))
 
 	zv, err = EncodeZeekStrings(d, zs("some path", "123.456", ""))
 	assert.NoError(t, err)
 	r = NewRecordNoTs(d, zv)
 	assert.EqualValues(t, 123456000000, r.Ts)
-	assert.EqualValues(t, "some path", r.Slice(0).Contents())
-	assert.EqualValues(t, "123.456", r.Slice(1).Contents())
-	assert.EqualValues(t, "", r.Slice(2).Contents())
+	assert.EqualValues(t, "some path", r.Slice(0))
+	assert.EqualValues(t, "123.456", r.Slice(1))
+	assert.EqualValues(t, "", r.Slice(2))
 	assert.Nil(t, r.Slice(3))
 
 	zv, err = EncodeZeekStrings(d, zs("some path", "123.456", "-"))
 	assert.NoError(t, err)
 	r = NewRecordNoTs(d, zv)
 	assert.EqualValues(t, 123456000000, r.Ts)
-	assert.EqualValues(t, "some path", r.Slice(0).Contents())
-	assert.EqualValues(t, "123.456", r.Slice(1).Contents())
-	assert.EqualValues(t, zval.Encoding{0}, r.Slice(2).Contents())
-	assert.Nil(t, r.Slice(3).Contents())
+	assert.EqualValues(t, "some path", r.Slice(0))
+	assert.EqualValues(t, "123.456", r.Slice(1))
+	assert.EqualValues(t, zval.Encoding(nil), r.Slice(2))
+	assert.Nil(t, r.Slice(3))
 
 	typ, err = zeek.LookupType("record[_path:string,ts:time,data:set[int]]")
 	require.NoError(t, err)

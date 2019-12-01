@@ -41,9 +41,9 @@ func NewRecord(d *Descriptor, ts nano.Ts, raw zval.Encoding) *Record {
 func NewRecordNoTs(d *Descriptor, zv zval.Encoding) *Record {
 	r := NewRecord(d, 0, zv)
 	if d.TsCol >= 0 {
-		tzv := r.Slice(d.TsCol)
-		if tzv != nil {
-			r.Ts, _ = zeek.TypeTime.Parse(tzv.Contents())
+		body := r.Slice(d.TsCol)
+		if body != nil {
+			r.Ts, _ = zeek.TypeTime.Parse(body)
 		}
 	}
 	return r
@@ -247,13 +247,22 @@ func splatRecord(typ *zeek.TypeRecord, zv zval.Encoding) ([]string, error) {
 // This returns the zeek strings for this record.  It works only for records
 // that can be represented as legacy zeek values.  XXX We need to not use this.
 // XXX change to Pretty for output writers?... except zeek?
-func (r *Record) Strings() ([]string, error) {
-	return splatRecord(r.Descriptor.Type, r.Raw)
+func (r *Record) ZeekStrings() ([]string, error) {
+	var ss []string
+	it := r.ZvalIter()
+	for _, col := range r.Descriptor.Type.Columns {
+		val, isContainer, err := it.Next()
+		if err != nil {
+			return nil, err
+		}
+		ss = append(ss, ZvalToZeekString(col.Type, val, isContainer))
+	}
+	return ss, nil
 }
 
 func (r *Record) ValueByColumn(col int) zeek.Value {
 	//XXX shouldn't ignore error
-	v, _ := r.Descriptor.Type.Columns[col].Type.New(r.Slice(col).Contents())
+	v, _ := r.Descriptor.Type.Columns[col].Type.New(r.Slice(col))
 	return v
 }
 
@@ -266,27 +275,19 @@ func (r *Record) ValueByField(field string) zeek.Value {
 	return nil
 }
 
-func (r *Record) OldSlice(column int) zval.Encoding {
-	envelope := r.Slice(column)
-	if envelope == nil {
-		return nil
-	}
-	return envelope.Contents()
-}
-
 func (r *Record) Slice(column int) zval.Encoding {
-	var envelope zval.Encoding
-	for i, it := 0, zval.IterEncoding(r.Raw); i <= column; i++ {
+	var zv zval.Encoding
+	for i, it := 0, zval.Iter(r.Raw); i <= column; i++ {
 		if it.Done() {
 			return nil
 		}
 		var err error
-		envelope, err = it.Next()
+		zv, _, err = it.Next()
 		if err != nil {
 			return nil
 		}
 	}
-	return envelope
+	return zv
 }
 
 func (r *Record) String(column int) string {
@@ -320,7 +321,7 @@ func (r *Record) AccessString(field string) (string, error) {
 	if !ok {
 		return "", ErrTypeMismatch
 	}
-	return typeString.Parse(e.Encoding.Contents())
+	return typeString.Parse(e.Body)
 }
 
 func (r *Record) AccessBool(field string) (bool, error) {
@@ -332,7 +333,7 @@ func (r *Record) AccessBool(field string) (bool, error) {
 	if !ok {
 		return false, ErrTypeMismatch
 	}
-	return typeBool.Parse(e.Encoding.Contents())
+	return typeBool.Parse(e.Body)
 }
 
 func (r *Record) AccessInt(field string) (int64, error) {
@@ -342,12 +343,12 @@ func (r *Record) AccessInt(field string) (int64, error) {
 	}
 	switch typ := e.Type.(type) {
 	case *zeek.TypeOfInt:
-		return typ.Parse(e.Encoding.Contents())
+		return typ.Parse(e.Body)
 	case *zeek.TypeOfCount:
-		v, err := typ.Parse(e.Encoding.Contents())
+		v, err := typ.Parse(e.Body)
 		return int64(v), err
 	case *zeek.TypeOfPort:
-		v, err := typ.Parse(e.Encoding.Contents())
+		v, err := typ.Parse(e.Body)
 		return int64(v), err
 	}
 	return 0, ErrTypeMismatch
@@ -362,7 +363,7 @@ func (r *Record) AccessDouble(field string) (float64, error) {
 	if !ok {
 		return 0, ErrTypeMismatch
 	}
-	return typeDouble.Parse(e.Encoding.Contents())
+	return typeDouble.Parse(e.Body)
 }
 
 func (r *Record) AccessIP(field string) (net.IP, error) {
@@ -374,7 +375,7 @@ func (r *Record) AccessIP(field string) (net.IP, error) {
 	if !ok {
 		return nil, ErrTypeMismatch
 	}
-	return typeAddr.Parse(e.Encoding.Contents())
+	return typeAddr.Parse(e.Body)
 }
 
 func (r *Record) AccessTime(field string) (nano.Ts, error) {
@@ -386,7 +387,7 @@ func (r *Record) AccessTime(field string) (nano.Ts, error) {
 	if !ok {
 		return 0, ErrTypeMismatch
 	}
-	return typeTime.Parse(e.Encoding.Contents())
+	return typeTime.Parse(e.Body)
 }
 
 // MarshalJSON implements json.Marshaler.

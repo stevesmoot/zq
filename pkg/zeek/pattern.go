@@ -69,7 +69,7 @@ func (p *Pattern) Comparison(op string) (Predicate, error) {
 	return func(e TypedEncoding) bool {
 		switch e.Type.(type) {
 		case *TypeOfString, *TypeOfEnum:
-			return compare(re, e.Encoding.Contents())
+			return compare(re, e.Body)
 		}
 		return false
 	}, nil

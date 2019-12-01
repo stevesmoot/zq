@@ -48,11 +48,11 @@ func runTest(filt string, record *zson.Record, expectedResult bool) error {
 
 	// Failure!  Try to assemble a useful error message.
 	var raw string
-	strs, err := record.Strings()
+	strs, err := record.ZeekStrings()
 	if err == nil {
 		raw = strings.Join(strs, ",")
 	} else {
-		raw = fmt.Sprintf("(unprintable record: %s)\nRAW: %s", err, record.Raw.String())
+		raw = fmt.Sprintf("(record not zeek printable: %s)\nRAW: %s", err, record.Raw.String())
 	}
 	if expectedResult {
 		return fmt.Errorf("Filter \"%s\" should have matched \"%s\"", filt, raw)
@@ -99,9 +99,6 @@ func TestFilters(t *testing.T) {
 			break
 		}
 		rec.Keep()
-		s, _ := rec.Strings()
-		fmt.Println("DEBUG PARSE", s)
-		fmt.Println("DEBUG PARSE RAW", rec.Raw.String())
 		records = append(records, rec)
 	}
 
@@ -164,7 +161,8 @@ func TestFilters(t *testing.T) {
 		}
 		err := runTest(tt.filter, tt.record, tt.expectedResult)
 		if err != nil {
-			s, _ := tt.record.Strings()
+			//XXX
+			s, _ := tt.record.ZeekStrings()
 			fmt.Println(tt.filter, s)
 		}
 		require.NoError(t, err, tt.filter, "test index: "+strconv.Itoa(k), records[0])

@@ -217,8 +217,7 @@ func trimInnerTypes(typ string, raw string) string {
 // returns true iff the predicate matched an element from the collection.
 func Contains(compare Predicate) Predicate {
 	return func(e TypedEncoding) bool {
-		fmt.Println("CONTAINS", e.Encoding.String())
-		fmt.Println("CONTAINS", e.Encoding.Contents().String())
+		fmt.Println("CONTAINS", e.Body.String())
 		var elType Type
 		switch typ := e.Type.(type) {
 		case *TypeSet:
@@ -228,13 +227,13 @@ func Contains(compare Predicate) Predicate {
 		default:
 			return false
 		}
-		for it := zval.IterEncoding(e.Encoding.Contents()); !it.Done(); {
-			val, err := it.Next()
+		for it := e.Iter(); !it.Done(); {
+			val, _, err := it.Next()
 			if err != nil {
 				return false
 			}
 			v := TypedEncoding{elType, val}
-			fmt.Println("COMPARE", elType.String(), val.String())
+			//fmt.Println("COMPARE", elType.String(), val.String())
 			if compare(v) {
 				fmt.Println("COMPARE TRUE")
 				return true
@@ -246,15 +245,14 @@ func Contains(compare Predicate) Predicate {
 }
 
 func ContainerLength(e TypedEncoding) (int, error) {
-	val := e.Encoding.Contents()
 	switch e.Type.(type) {
 	case *TypeSet, *TypeVector:
-		if val == nil {
+		if e.Body == nil {
 			return -1, ErrLenUnset
 		}
 		var n int
-		for it := zval.IterEncoding(val); !it.Done(); {
-			if _, err := it.Next(); err != nil {
+		for it := e.Iter(); !it.Done(); {
+			if _, _, err := it.Next(); err != nil {
 				return -1, err
 			}
 			n++
@@ -265,13 +263,26 @@ func ContainerLength(e TypedEncoding) (int, error) {
 	}
 }
 
-//XXX this should go in vector.go
+func (e TypedEncoding) Iter() zval.Iter {
+	return zval.Iter(e.Body)
+}
+
+func (e TypedEncoding) String() string {
+	if IsContainerType(e.Type) {
+		return e.Body.String()
+	}
+	var b strings.Builder
+	b.WriteString("(")
+	b.WriteString(ustring(e.Body))
+	b.WriteString(")")
+	return b.String()
+}
 
 // If the passed-in element is a vector, attempt to get the idx'th
 // element, and return its type and raw representation.  Returns an
 // error if the passed-in element is not a vector or if idx is
 // outside the vector bounds.
-func VectorIndex(e TypedEncoding, idx int64) (TypedEncoding, error) {
+func (e TypedEncoding) VectorIndex(idx int64) (TypedEncoding, error) {
 	vec, ok := e.Type.(*TypeVector)
 	if !ok {
 		return TypedEncoding{}, ErrNotVector
@@ -279,13 +290,13 @@ func VectorIndex(e TypedEncoding, idx int64) (TypedEncoding, error) {
 	if idx < 0 {
 		return TypedEncoding{}, ErrIndex
 	}
-	for i, it := 0, zval.IterEncoding(e.Encoding.Contents()); !it.Done(); i++ {
-		envelope, err := it.Next()
+	for i, it := 0, e.Iter(); !it.Done(); i++ {
+		zv, _, err := it.Next()
 		if err != nil {
 			return TypedEncoding{}, err
 		}
 		if i == int(idx) {
-			return TypedEncoding{vec.typ, envelope}, nil
+			return TypedEncoding{vec.typ, zv}, nil
 		}
 	}
 	return TypedEncoding{}, ErrIndex

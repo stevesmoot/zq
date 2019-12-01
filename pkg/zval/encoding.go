@@ -86,6 +86,7 @@ func (e Encoding) Body() (Encoding, error) {
 	return body, nil
 }
 
+/*
 func (e Encoding) Contents() Encoding {
 	// Uvarint is zero for an unset zval; otherwise, it is the value's
 	// length plus one.
@@ -101,6 +102,7 @@ func (e Encoding) Contents() Encoding {
 	end := n + tagLength(u64)
 	return e[n:end]
 }
+*/
 
 func New(b []byte) Encoding {
 	//XXX

@@ -60,7 +60,7 @@ func (e *Enum) Comparison(op string) (Predicate, error) {
 	return func(e TypedEncoding) bool {
 		switch e.Type.(type) {
 		case *TypeOfString, *TypeOfEnum:
-			return compare(ustring(e.Encoding.Contents()), pattern)
+			return compare(ustring(e.Body), pattern)
 		}
 		return false
 	}, nil
