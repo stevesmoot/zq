@@ -40,7 +40,7 @@ func runTest(valType string, valRaw string, containerType string, containerRaw s
 	}
 	columns := []zeek.Column{{"f", containerTyp}}
 	d := zson.NewDescriptor(zeek.LookupTypeRecord(columns))
-	r, err := zson.NewTestRecord(d, containerRaw)
+	r, err := zson.NewRecordZeekStrings(d, containerRaw)
 	if err != nil {
 		return err
 	}
@@ -109,6 +109,7 @@ func TestContainers(t *testing.T) {
 
 		//XXX for records, just make sure they parse for now.
 		// there is no ast/filter support for them yet
+
 		containerType = recordType(tt.elementType, tt.containerLen)
 		parsedType, err := zeek.LookupType(containerType)
 		require.NoError(t, err)

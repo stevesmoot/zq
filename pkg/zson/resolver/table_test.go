@@ -12,7 +12,7 @@ import (
 func TestTableAddColumns(t *testing.T) {
 	tab := NewTable()
 	d := tab.GetByColumns([]zeek.Column{{"s1", zeek.TypeString}})
-	r, err := zson.NewTestRecord(d, "S1")
+	r, err := zson.NewRecordZeekStrings(d, "S1")
 	require.NoError(t, err)
 	cols := []zeek.Column{{"ts", zeek.TypeTime}, {"s2", zeek.TypeString}}
 	r, err = tab.AddColumns(r, cols, []string{"123.456", "S2"})

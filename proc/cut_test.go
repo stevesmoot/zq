@@ -19,24 +19,24 @@ func TestCut(t *testing.T) {
 	// just write the test inputs in zson and not have to create
 	// descriptors and records programatically...
 	fooDesc := resolver.GetByColumns([]zeek.Column{{"foo", zeek.TypeString}})
-	r1, err := zson.NewTestRecord(fooDesc, "foo1")
-	r2, err := zson.NewTestRecord(fooDesc, "foo2")
-	r3, err := zson.NewTestRecord(fooDesc, "foo3")
+	r1, err := zson.NewRecordZeekStrings(fooDesc, "foo1")
+	r2, err := zson.NewRecordZeekStrings(fooDesc, "foo2")
+	r3, err := zson.NewRecordZeekStrings(fooDesc, "foo3")
 	fooBatch := zson.NewArray([]*zson.Record{r1, r2, r3}, nano.MaxSpan)
 
 	barDesc := resolver.GetByColumns([]zeek.Column{{"bar", zeek.TypeString}})
-	r1, err = zson.NewTestRecord(barDesc, "bar1")
-	r2, err = zson.NewTestRecord(barDesc, "bar2")
-	r3, err = zson.NewTestRecord(barDesc, "bar3")
+	r1, err = zson.NewRecordZeekStrings(barDesc, "bar1")
+	r2, err = zson.NewRecordZeekStrings(barDesc, "bar2")
+	r3, err = zson.NewRecordZeekStrings(barDesc, "bar3")
 	barBatch := zson.NewArray([]*zson.Record{r1, r2, r3}, nano.MaxSpan)
 
 	fooBarDesc := resolver.GetByColumns([]zeek.Column{
 		{"foo", zeek.TypeString},
 		{"bar", zeek.TypeString},
 	})
-	r1, err = zson.NewTestRecord(fooBarDesc, "foo1", "bar1")
-	r2, err = zson.NewTestRecord(fooBarDesc, "foo2", "bar2")
-	r3, err = zson.NewTestRecord(fooBarDesc, "foo3", "bar3")
+	r1, err = zson.NewRecordZeekStrings(fooBarDesc, "foo1", "bar1")
+	r2, err = zson.NewRecordZeekStrings(fooBarDesc, "foo2", "bar2")
+	r3, err = zson.NewRecordZeekStrings(fooBarDesc, "foo3", "bar3")
 	fooBarBatch := zson.NewArray([]*zson.Record{r1, r2, r3}, nano.MaxSpan)
 
 	// test "cut foo" on records that only have field foo

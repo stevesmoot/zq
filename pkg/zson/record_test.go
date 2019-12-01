@@ -14,13 +14,13 @@ func TestNewRecordZeekStrings(t *testing.T) {
 	require.NoError(t, err)
 	d := NewDescriptor(typ.(*zeek.TypeRecord))
 
-	_, err = NewTestRecord(d, "some path", "123.456")
+	_, err = NewRecordZeekStrings(d, "some path", "123.456")
 	assert.EqualError(t, err, "got 2 values, expected 3")
 
-	_, err = NewTestRecord(d, "some path", "123.456", "some data", "unexpected")
+	_, err = NewRecordZeekStrings(d, "some path", "123.456", "some data", "unexpected")
 	assert.EqualError(t, err, "got 4 values, expected 3")
 
-	r, err := NewTestRecord(d, "some path", "123.456", "some data")
+	r, err := NewRecordZeekStrings(d, "some path", "123.456", "some data")
 	assert.NoError(t, err)
 	assert.EqualValues(t, 123456000000, r.Ts)
 	assert.EqualValues(t, "some path", r.Slice(0))
@@ -28,7 +28,7 @@ func TestNewRecordZeekStrings(t *testing.T) {
 	assert.EqualValues(t, "some data", r.Slice(2))
 	assert.Nil(t, r.Slice(3))
 
-	r, err = NewTestRecord(d, "some path", "123.456", "")
+	r, err = NewRecordZeekStrings(d, "some path", "123.456", "")
 	assert.NoError(t, err)
 	assert.EqualValues(t, 123456000000, r.Ts)
 	assert.EqualValues(t, "some path", r.Slice(0))

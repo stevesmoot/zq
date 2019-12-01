@@ -98,9 +98,9 @@ func NewRecordZvals(d *Descriptor, vals ...zval.Encoding) (t *Record, err error)
 	return NewRecord(d, ts, raw), nil
 }
 
-// NewTestRecord creates a record from Zeek UTF-8 strings.  This is only
+// NewRecordZeekStrings creates a record from Zeek UTF-8 strings.  This is only
 // used for testing right now.
-func NewTestRecord(d *Descriptor, ss ...string) (t *Record, err error) {
+func NewRecordZeekStrings(d *Descriptor, ss ...string) (t *Record, err error) {
 	vals := make([][]byte, 0, 32)
 	for _, s := range ss {
 		vals = append(vals, []byte(s))
