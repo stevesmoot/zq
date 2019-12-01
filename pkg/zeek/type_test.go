@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/mccanne/zq/pkg/zeek"
+	"github.com/mccanne/zq/pkg/zval"
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,7 +16,9 @@ type TypedValue struct {
 
 func runVector(f zeek.Predicate, vals []TypedValue, results []bool) error {
 	for k, tv := range vals {
-		if f(tv.typ, []byte(tv.val)) != results[k] {
+		zv := zval.AppendValue(nil, []byte(tv.val))
+		e := zeek.TypedEncoding{tv.typ, zv}
+		if f(e) != results[k] {
 			return fmt.Errorf("value '%s' of type %s at slot %d failed test", tv.val, tv.typ, k)
 		}
 	}

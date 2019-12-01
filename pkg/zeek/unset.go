@@ -52,10 +52,10 @@ func (u *Unset) Comparison(op string) (Predicate, error) {
 	if !ok {
 		return nil, fmt.Errorf("unknown unset comparator: %s", op)
 	}
-	return func(typ Type, val []byte) bool {
-		switch typ.(type) {
+	return func(e TypedEncoding) bool {
+		switch e.Type.(type) {
 		case *TypeOfString, *TypeOfBool, *TypeOfCount, *TypeOfInt, *TypeOfDouble, *TypeOfTime, *TypeOfInterval, *TypeOfPort, *TypeOfAddr, *TypeOfSubnet, *TypeOfEnum, *TypeSet, *TypeVector:
-			return compare(val)
+			return compare(e.Encoding.Contents())
 		}
 		return false
 	}, nil

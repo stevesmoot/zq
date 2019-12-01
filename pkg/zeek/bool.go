@@ -91,12 +91,12 @@ func (b *Bool) Comparison(op string) (Predicate, error) {
 		return nil, fmt.Errorf("unknown bool comparator: %s", op)
 	}
 	pattern := b.Native
-	return func(typ Type, val []byte) bool {
-		typeBool, ok := typ.(*TypeOfBool)
+	return func(e TypedEncoding) bool {
+		typeBool, ok := e.Type.(*TypeOfBool)
 		if !ok {
 			return false
 		}
-		v, err := typeBool.Parse(val)
+		v, err := typeBool.Parse(e.Encoding.Contents())
 		if err != nil {
 			return false
 		}

@@ -57,10 +57,10 @@ func (e *Enum) Comparison(op string) (Predicate, error) {
 		return nil, fmt.Errorf("unknown enum comparator: %s", op)
 	}
 	pattern := e.Native
-	return func(typ Type, val []byte) bool {
-		switch typ.(type) {
+	return func(e TypedEncoding) bool {
+		switch e.Type.(type) {
 		case *TypeOfString, *TypeOfEnum:
-			return compare(ustring(val), pattern)
+			return compare(ustring(e.Encoding.Contents()), pattern)
 		}
 		return false
 	}, nil

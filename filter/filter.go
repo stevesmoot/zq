@@ -71,7 +71,7 @@ func combine(res expr.FieldExprResolver, pred zeek.Predicate) Filter {
 			// field (or sub-field) doesn't exist in this record
 			return false
 		}
-		return pred(v.Type, v.Encoding.Contents())
+		return pred(v)
 	}
 }
 
@@ -87,8 +87,8 @@ func CompileFieldCompare(node ast.CompareField, val zeek.Value) (Filter, error) 
 		if err != nil {
 			return nil, err
 		}
-		checklen := func(typ zeek.Type, val []byte) bool {
-			len, err := zeek.ContainerLength(typ, val)
+		checklen := func(e zeek.TypedEncoding) bool {
+			len, err := zeek.ContainerLength(e)
 			if err != nil {
 				return false
 			}
@@ -114,13 +114,13 @@ func CompileFieldCompare(node ast.CompareField, val zeek.Value) (Filter, error) 
 
 func EvalAny(eval zeek.Predicate) Filter {
 	return func(p *zson.Record) bool {
-		it := p.ZvalIter()
+		it := p.GenVals()
 		for _, c := range p.Type.Columns {
-			val, _, err := it.Next()
+			val, err := it.Next()
 			if err != nil {
 				return false
 			}
-			if eval(c.Type, val) {
+			if eval(zeek.TypedEncoding{c.Type, val}) {
 				return true
 			}
 		}

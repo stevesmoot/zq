@@ -66,10 +66,10 @@ func (p *Pattern) Comparison(op string) (Predicate, error) {
 		return nil, fmt.Errorf("unknown pattern comparator: %s", op)
 	}
 	re := p.Native
-	return func(typ Type, val []byte) bool {
-		switch typ.(type) {
+	return func(e TypedEncoding) bool {
+		switch e.Type.(type) {
 		case *TypeOfString, *TypeOfEnum:
-			return compare(re, val)
+			return compare(re, e.Encoding.Contents())
 		}
 		return false
 	}, nil

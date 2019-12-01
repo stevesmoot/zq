@@ -66,12 +66,12 @@ func (p *Port) Comparison(op string) (Predicate, error) {
 	// to the trouble of specifying a port match (e.g., ":80" vs "80") then
 	// we use strict typing here on the port comparison.
 	pattern := int64(p.Native)
-	return func(typ Type, val []byte) bool {
-		typePort, ok := typ.(*TypeOfPort)
+	return func(e TypedEncoding) bool {
+		typePort, ok := e.Type.(*TypeOfPort)
 		if !ok {
 			return false
 		}
-		v, err := typePort.Parse(val)
+		v, err := typePort.Parse(e.Encoding.Contents())
 		if err != nil {
 			return false
 		}

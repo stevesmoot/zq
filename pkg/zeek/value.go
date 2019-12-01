@@ -22,7 +22,7 @@ type TypedEncoding struct {
 // byte slice according the Type, and returns a boolean result based on the
 // typed value.  For example, each Value has a Comparison method that returns
 // a Predicate for comparing byte slices to that value.
-type Predicate func(typ Type, val []byte) bool
+type Predicate func(TypedEncoding) bool
 
 // Value is the interface that all zeek values implement.
 type Value interface {

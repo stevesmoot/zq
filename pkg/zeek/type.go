@@ -216,9 +216,9 @@ func trimInnerTypes(typ string, raw string) string {
 // the original predicate is applied to each element.  The new precicate
 // returns true iff the predicate matched an element from the collection.
 func Contains(compare Predicate) Predicate {
-	return func(typ Type, val []byte) bool {
+	return func(e TypedEncoding) bool {
 		var elType Type
-		switch typ := typ.(type) {
+		switch typ := e.Type.(type) {
 		case *TypeSet:
 			elType = typ.innerType
 		case *TypeVector:
@@ -226,12 +226,13 @@ func Contains(compare Predicate) Predicate {
 		default:
 			return false
 		}
-		for it := zval.Iter(val); !it.Done(); {
-			val, _, err := it.Next()
+		for it := zval.IterEncoding(e.Encoding); !it.Done(); {
+			val, err := it.Next()
 			if err != nil {
 				return false
 			}
-			if compare(elType, val) {
+			e := TypedEncoding{elType, val}
+			if compare(e) {
 				return true
 			}
 		}
@@ -239,15 +240,17 @@ func Contains(compare Predicate) Predicate {
 	}
 }
 
-func ContainerLength(typ Type, val []byte) (int, error) {
-	switch typ.(type) {
+//XXX we shouldn't need this
+func ContainerLength(e TypedEncoding) (int, error) {
+	val := e.Encoding
+	switch e.Type.(type) {
 	case *TypeSet, *TypeVector:
 		if val == nil {
 			return -1, ErrLenUnset
 		}
 		var n int
-		for it := zval.Iter(val); !it.Done(); {
-			if _, _, err := it.Next(); err != nil {
+		for it := zval.IterEncoding(val); !it.Done(); {
+			if _, err := it.Next(); err != nil {
 				return -1, err
 			}
 			n++

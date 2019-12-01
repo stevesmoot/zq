@@ -72,12 +72,12 @@ func (a *Addr) Comparison(op string) (Predicate, error) {
 		return nil, fmt.Errorf("unknown addr comparator: %s", op)
 	}
 	pattern := a.Native
-	return func(typ Type, val []byte) bool {
-		typeAddr, ok := typ.(*TypeOfAddr)
+	return func(e TypedEncoding) bool {
+		typeAddr, ok := e.Type.(*TypeOfAddr)
 		if !ok {
 			return false
 		}
-		ip, err := typeAddr.Parse(val)
+		ip, err := typeAddr.Parse(e.Encoding.Contents())
 		if err != nil {
 			return false
 		}

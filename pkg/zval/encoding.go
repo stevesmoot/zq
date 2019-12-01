@@ -31,6 +31,10 @@ func (e Encoding) Iter() Iter {
 	return Iter(e)
 }
 
+func (e Encoding) IterEncoding() IterEncoding {
+	return IterEncoding(e)
+}
+
 func (e Encoding) String() string {
 	b, err := e.build(nil)
 	if err != nil {

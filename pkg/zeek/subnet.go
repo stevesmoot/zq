@@ -104,8 +104,9 @@ func (s *Subnet) Comparison(op string) (Predicate, error) {
 		return nil, fmt.Errorf("unknown subnet comparator: %s", op)
 	}
 	pattern := s.Native
-	return func(typ Type, val []byte) bool {
-		switch typ.(type) {
+	return func(e TypedEncoding) bool {
+		val := e.Encoding.Contents()
+		switch e.Type.(type) {
 		case *TypeOfAddr:
 			ip, err := TypeAddr.Parse(val)
 			if err == nil {
