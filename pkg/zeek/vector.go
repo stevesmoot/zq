@@ -73,12 +73,12 @@ func (v *Vector) String() string {
 	return s
 }
 
-func (v *Vector) Encoding() []byte {
+func (v *Vector) Encode(dst zval.Encoding) zval.Encoding {
 	var zv zval.Encoding
 	for _, val := range v.values {
-		zv = zval.Append(zv, val.Encoding(), IsContainer(val))
+		zv = val.Encode(zv)
 	}
-	return zv
+	return zval.AppendContainerValue(dst, zv)
 }
 
 func (v *Vector) Type() Type {

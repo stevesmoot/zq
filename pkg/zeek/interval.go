@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/mccanne/zq/pkg/nano"
+	"github.com/mccanne/zq/pkg/zval"
 )
 
 type TypeOfInterval struct{}
@@ -47,8 +48,9 @@ func (i *Interval) String() string {
 	return nano.DurationString(i.Native)
 }
 
-func (i *Interval) Encoding() []byte {
-	return []byte(i.String())
+func (i *Interval) Encode(dst zval.Encoding) zval.Encoding {
+	v := []byte(i.String())
+	return zval.AppendValue(dst, v)
 }
 
 func (i *Interval) Type() Type {

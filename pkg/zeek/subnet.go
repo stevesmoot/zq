@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+
+	"github.com/mccanne/zq/pkg/zval"
 )
 
 type TypeOfSubnet struct{}
@@ -80,8 +82,9 @@ func (s *Subnet) String() string {
 	return s.Native.String()
 }
 
-func (s *Subnet) Encoding() []byte {
-	return []byte(s.String())
+func (s *Subnet) Encode(dst zval.Encoding) zval.Encoding {
+	v := []byte(s.String())
+	return zval.AppendValue(dst, v)
 }
 
 func (s *Subnet) Type() Type {

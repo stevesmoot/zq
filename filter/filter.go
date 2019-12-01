@@ -66,12 +66,12 @@ func SearchString(s string) Filter {
 
 func combine(res expr.FieldExprResolver, pred zeek.Predicate) Filter {
 	return func(r *zson.Record) bool {
-		typ, val := res(r)
-		if val == nil {
+		v := res(r)
+		if v.Type == nil {
 			// field (or sub-field) doesn't exist in this record
 			return false
 		}
-		return pred(typ, val)
+		return pred(v.Type, v.Encoding.Contents())
 	}
 }
 

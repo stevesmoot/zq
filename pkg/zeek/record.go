@@ -144,12 +144,12 @@ func (r *Record) String() string {
 	return d
 }
 
-func (r *Record) Encoding() []byte {
+func (r *Record) Encode(dst zval.Encoding) zval.Encoding {
 	var zv zval.Encoding
 	for _, v := range r.values {
-		zv = zval.Append(zv, v.Encoding(), IsContainer(v))
+		zv = v.Encode(zv)
 	}
-	return zv
+	return zval.AppendContainerValue(dst, zv)
 }
 
 func (r *Record) Type() Type {

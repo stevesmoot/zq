@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+
+	"github.com/mccanne/zq/pkg/zval"
 )
 
 type TypeOfAddr struct{}
@@ -56,8 +58,9 @@ func (a *Addr) Type() Type {
 	return TypeAddr
 }
 
-func (a *Addr) Encoding() []byte {
-	return []byte(a.Native.String())
+func (a *Addr) Encode(dst zval.Encoding) zval.Encoding {
+	b := []byte(a.Native.String())
+	return zval.AppendValue(dst, b)
 }
 
 // Comparison returns a Predicate that compares typed byte slices that must

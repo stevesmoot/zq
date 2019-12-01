@@ -3,6 +3,8 @@ package zeek
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/mccanne/zq/pkg/zval"
 )
 
 type TypeOfString struct{}
@@ -45,8 +47,9 @@ func (s *String) String() string {
 	return s.Native
 }
 
-func (s *String) Encoding() []byte {
-	return []byte(s.String())
+func (s *String) Encode(dst zval.Encoding) zval.Encoding {
+	v := []byte(s.Native)
+	return zval.AppendValue(dst, v)
 }
 
 func (s *String) Type() Type {

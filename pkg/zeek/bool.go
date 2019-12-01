@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+
+	"github.com/mccanne/zq/pkg/zval"
 )
 
 type TypeOfBool struct{}
@@ -71,8 +73,9 @@ func (b *Bool) String() string {
 	return strconv.FormatBool(b.Native)
 }
 
-func (b *Bool) Encoding() []byte {
-	return []byte(b.String())
+func (b *Bool) Encode(dst zval.Encoding) zval.Encoding {
+	v := []byte(b.String())
+	return zval.AppendValue(dst, v)
 }
 
 func (b *Bool) Type() Type {

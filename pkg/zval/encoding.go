@@ -32,19 +32,35 @@ func (e Encoding) Iter() Iter {
 }
 
 func (e Encoding) String() string {
-	s := ""
+	b, err := e.build(nil)
+	if err != nil {
+		// This should happen only for bugs.  Return the error
+		// string will help with debugging.
+		return err.Error()
+	}
+	return string(b)
+}
+
+func (e Encoding) build(b []byte) ([]byte, error) {
 	for it := Iter(e); !it.Done(); {
 		v, container, err := it.Next()
 		if err != nil {
-			return s + "Err: " + err.Error()
+			return nil, err
 		}
 		if container {
-			s += "[" + v.String() + "]"
+			b = append(b, '[')
+			b, err = v.build(b)
+			if err != nil {
+				return nil, err
+			}
+			b = append(b, ']')
 		} else {
-			s += "(" + string(v.Bytes()) + ")"
+			b = append(b, '(')
+			b = append(b, v.Bytes()...)
+			b = append(b, ')')
 		}
 	}
-	return s
+	return b, nil
 }
 
 // Body returns the contents of an encoding that represents a container as
@@ -64,6 +80,28 @@ func (e Encoding) Body() (Encoding, error) {
 		return nil, ErrNotSingleton
 	}
 	return body, nil
+}
+
+func (e Encoding) Contents() Encoding {
+	// Uvarint is zero for an unset zval; otherwise, it is the value's
+	// length plus one.
+	u64, n := Uvarint(e)
+	if n <= 0 {
+		// XXX this should only happen for internal bugs (outside data
+		// cannot cause such a corruption).  I think we should panic.
+		return nil
+	}
+	if tagIsUnset(u64) {
+		return e[:n]
+	}
+	end := n + tagLength(u64)
+	return e[n:end]
+}
+
+func New(b []byte) Encoding {
+	//XXX
+	return AppendValue(nil, b)
+
 }
 
 // AppendValue encodes each byte slice as a value Encoding, concatenates the

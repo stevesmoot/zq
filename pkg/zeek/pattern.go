@@ -3,6 +3,8 @@ package zeek
 import (
 	"fmt"
 	"regexp"
+
+	"github.com/mccanne/zq/pkg/zval"
 )
 
 type TypeOfPattern struct{}
@@ -46,8 +48,9 @@ func (p *Pattern) String() string {
 	return p.Native.String()
 }
 
-func (p *Pattern) Encoding() []byte {
-	return []byte(p.String())
+func (p *Pattern) Encode(dst zval.Encoding) zval.Encoding {
+	v := []byte(p.String())
+	return zval.AppendValue(dst, v)
 }
 
 func (p *Pattern) Type() Type {

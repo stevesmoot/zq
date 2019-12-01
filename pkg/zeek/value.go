@@ -13,6 +13,11 @@ var (
 	ErrTypeSyntax = errors.New("syntax error parsing type string")
 )
 
+type TypedEncoding struct {
+	Type
+	zval.Encoding
+}
+
 // A Predicate is a function that takes a Type and a byte slice, parses the
 // byte slice according the Type, and returns a boolean result based on the
 // typed value.  For example, each Value has a Comparison method that returns
@@ -44,7 +49,7 @@ type Value interface {
 	// return an empty list and false.
 	Elements() ([]Value, bool)
 
-	Encoding() []byte
+	Encode(zval.Encoding) zval.Encoding
 }
 
 // Parse translates an ast.TypedValue into a zeek.Value.

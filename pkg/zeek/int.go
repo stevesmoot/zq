@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/mccanne/zq/pkg/nano"
+	"github.com/mccanne/zq/pkg/zval"
 )
 
 type TypeOfInt struct{}
@@ -52,8 +53,9 @@ func (i *Int) String() string {
 	return strconv.FormatInt(i.Native, 10)
 }
 
-func (i *Int) Encoding() []byte {
-	return []byte(i.String())
+func (i *Int) Encode(dst zval.Encoding) zval.Encoding {
+	v := []byte(i.String())
+	return zval.AppendValue(dst, v)
 }
 
 func (i *Int) Type() Type {

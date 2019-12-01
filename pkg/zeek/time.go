@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/mccanne/zq/pkg/nano"
+	"github.com/mccanne/zq/pkg/zval"
 )
 
 type TypeOfTime struct{}
@@ -47,8 +48,9 @@ func (t *Time) String() string {
 	return t.Native.StringFloat()
 }
 
-func (t *Time) Encoding() []byte {
-	return []byte(t.String())
+func (t *Time) Encode(dst zval.Encoding) zval.Encoding {
+	v := []byte(t.String())
+	return zval.AppendValue(dst, v)
 }
 
 func (t *Time) Type() Type {

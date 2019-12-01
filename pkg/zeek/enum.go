@@ -3,6 +3,8 @@ package zeek
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/mccanne/zq/pkg/zval"
 )
 
 type TypeOfEnum struct{}
@@ -37,8 +39,9 @@ func (e *Enum) String() string {
 	return e.Native
 }
 
-func (e *Enum) Encoding() []byte {
-	return []byte(e.String())
+func (e *Enum) Encode(dst zval.Encoding) zval.Encoding {
+	v := []byte(e.String())
+	return zval.AppendValue(dst, v)
 }
 
 func (e *Enum) Type() Type {

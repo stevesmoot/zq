@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/mccanne/zq/pkg/nano"
+	"github.com/mccanne/zq/pkg/zval"
 )
 
 type TypeOfDouble struct{}
@@ -52,8 +53,9 @@ func (d *Double) String() string {
 	return strconv.FormatFloat(d.Native, 'g', -1, 64)
 }
 
-func (d *Double) Encoding() []byte {
-	return []byte(d.String())
+func (d *Double) Encode(dst zval.Encoding) zval.Encoding {
+	v := []byte(d.String())
+	return zval.AppendValue(dst, v)
 }
 
 func (d *Double) Type() Type {

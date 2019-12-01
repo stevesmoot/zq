@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"strconv"
+
+	"github.com/mccanne/zq/pkg/zval"
 )
 
 type TypeOfCount struct{}
@@ -42,8 +44,9 @@ func (c *Count) String() string {
 	return strconv.FormatUint(c.Native, 10)
 }
 
-func (c *Count) Encoding() []byte {
-	return []byte(c.String())
+func (c *Count) Encode(dst zval.Encoding) zval.Encoding {
+	v := []byte(c.String())
+	return zval.AppendValue(dst, v)
 }
 
 func (c *Count) Type() Type {

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+
+	"github.com/mccanne/zq/pkg/zval"
 )
 
 type TypeOfPort struct{}
@@ -46,8 +48,9 @@ func (p *Port) Type() Type {
 	return TypePort
 }
 
-func (p *Port) Encoding() []byte {
-	return []byte(p.String())
+func (p *Port) Encode(dst zval.Encoding) zval.Encoding {
+	v := []byte(p.String())
+	return zval.AppendValue(dst, v)
 }
 
 // Comparison returns a Predicate that compares typed byte slices that must

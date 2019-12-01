@@ -20,19 +20,19 @@ import (
 // If the expression can't be resolved (i.e., because some field
 // reference refers to a non-existent field, a vector index is out of
 // bounds, etc.), the resolver returns (nil, nil)
-type FieldExprResolver func(*zson.Record) (zeek.Type, []byte)
+type FieldExprResolver func(*zson.Record) zeek.TypedEncoding
 
 // fieldop, arrayIndex, and fieldRead are helpers used internally
 // by CompileFieldExpr() below.
 type fieldop interface {
-	apply(zeek.Type, []byte) (zeek.Type, []byte)
+	apply(zeek.Type, []byte) (zeek.Type, zval.Encoding)
 }
 
 type arrayIndex struct {
 	idx int64
 }
 
-func (ai *arrayIndex) apply(typ zeek.Type, val []byte) (zeek.Type, []byte) {
+func (ai *arrayIndex) apply(typ zeek.Type, val []byte) (zeek.Type, zval.Encoding) {
 	elType, elVal, err := zeek.VectorIndex(typ, val, ai.idx)
 	if err != nil {
 		return nil, nil
@@ -44,7 +44,7 @@ type fieldRead struct {
 	field string
 }
 
-func (fr *fieldRead) apply(typ zeek.Type, val []byte) (zeek.Type, []byte) {
+func (fr *fieldRead) apply(typ zeek.Type, val []byte) (zeek.Type, zval.Encoding) {
 	recType, ok := typ.(*zeek.TypeRecord)
 	if !ok {
 		// field reference on non-record type
@@ -59,13 +59,13 @@ func (fr *fieldRead) apply(typ zeek.Type, val []byte) (zeek.Type, []byte) {
 	for n, col := range recType.Columns {
 		if col.Name == fr.field {
 			var v []byte
-			it := zval.Iter(val)
+			it := zval.IterEncoding(val)
 			for i := 0; i <= n; i++ {
 				if it.Done() {
 					return nil, nil
 				}
 				var err error
-				v, _, err = it.Next()
+				v, err = it.Next()
 				if err != nil {
 					return nil, nil
 				}
@@ -121,20 +121,20 @@ outer:
 
 	// Here's the actual resolver: grab the top-level field and then
 	// apply any additional operations.
-	return func(r *zson.Record) (zeek.Type, []byte) {
+	return func(r *zson.Record) zeek.TypedEncoding {
 		col, ok := r.Descriptor.LUT[field]
 		if !ok {
 			// original field doesn't exist
-			return nil, nil
+			return zeek.TypedEncoding{}
 		}
 		typ := r.TypeOfColumn(col)
 		val := r.Slice(col)
 		for _, op := range ops {
 			typ, val = op.apply(typ, val)
 			if typ == nil {
-				return nil, nil
+				return zeek.TypedEncoding{}
 			}
 		}
-		return typ, val
+		return zeek.TypedEncoding{typ, val}
 	}, nil
 }

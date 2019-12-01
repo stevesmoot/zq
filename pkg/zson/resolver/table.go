@@ -159,16 +159,13 @@ func (t *Table) CreateCut(r *zson.Record, fields []string) (*zson.Record, uint64
 		columns[k].Name = fields[k]
 		columns[k].Type = types[k]
 	}
-	vals := make([]zval.Encoding, 0, 32)
-	for _, v := range r.Cut(fields, nil) {
-		vals = append(vals, v)
-	}
-	if vals == nil {
+	zv := r.Cut(fields)
+	if zv == nil {
 		return nil, found, nil
 	}
 	d := t.GetByColumns(columns)
-	rec, err := zson.NewRecordZvals(d, vals...)
-	return rec, found, err
+	rec := zson.NewRecordNoTs(d, zv)
+	return rec, found, nil
 }
 
 // Cache returns a cache of this table providing lockless lookups, but cannot

@@ -89,12 +89,12 @@ func (s *Set) String() string {
 	return d
 }
 
-func (s *Set) Encoding() []byte {
+func (s *Set) Encode(dst zval.Encoding) zval.Encoding {
 	var zv zval.Encoding
 	for _, v := range s.values {
-		zv = zval.Append(zv, v.Encoding(), IsContainer(v))
+		zv = v.Encode(zv)
 	}
-	return zv
+	return zval.AppendContainerValue(dst, zv)
 }
 
 func (s *Set) Type() Type {

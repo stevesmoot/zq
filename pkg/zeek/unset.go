@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"github.com/mccanne/zq/pkg/zval"
 )
 
 // ErrUnset is returned in Type.Parse / Type.Format when the value is unset.
@@ -37,8 +39,8 @@ func (u *Unset) String() string {
 	return "-"
 }
 
-func (u *Unset) Encoding() []byte {
-	return make([]byte, 0)
+func (u *Unset) Encode(dst zval.Encoding) zval.Encoding {
+	return zval.AppendValue(dst, nil)
 }
 
 func (u *Unset) Type() Type {
