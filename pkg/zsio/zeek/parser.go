@@ -230,7 +230,9 @@ func (p *Parser) ParseValue(line []byte) (*zson.Record, error) {
 		}
 		p.descriptor = d
 	}
-	zv, ts, err := zson.EncodeZeek(p.descriptor, []byte(p.path), line)
+	//XXX should store path as a byte slice so it doens't get compied
+	// each time here
+	zv, ts, err := zson.EncodeZeekLegacy(p.descriptor, []byte(p.path), line)
 	if err != nil {
 		return nil, err
 	}

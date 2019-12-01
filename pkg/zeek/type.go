@@ -217,6 +217,8 @@ func trimInnerTypes(typ string, raw string) string {
 // returns true iff the predicate matched an element from the collection.
 func Contains(compare Predicate) Predicate {
 	return func(e TypedEncoding) bool {
+		fmt.Println("CONTAINS", e.Encoding.String())
+		fmt.Println("CONTAINS", e.Encoding.Contents().String())
 		var elType Type
 		switch typ := e.Type.(type) {
 		case *TypeSet:
@@ -226,15 +228,18 @@ func Contains(compare Predicate) Predicate {
 		default:
 			return false
 		}
-		for it := zval.IterEncoding(e.Encoding); !it.Done(); {
+		for it := zval.IterEncoding(e.Encoding.Contents()); !it.Done(); {
 			val, err := it.Next()
 			if err != nil {
 				return false
 			}
-			e := TypedEncoding{elType, val}
-			if compare(e) {
+			v := TypedEncoding{elType, val}
+			fmt.Println("COMPARE", elType.String(), val.String())
+			if compare(v) {
+				fmt.Println("COMPARE TRUE")
 				return true
 			}
+			fmt.Println("COMPARE FALSE")
 		}
 		return false
 	}

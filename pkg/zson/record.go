@@ -111,6 +111,7 @@ func NewTestRecord(d *Descriptor, ss ...string) (t *Record, err error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("ENCODE TEST REC", zv.String())
 	return NewRecordNoTs(d, zv), nil
 }
 
@@ -194,12 +195,14 @@ func Splat(typ zeek.Type, zv zval.Encoding) (string, error) {
 // that can be represented as legacy zeek values.  XXX We need to not use this.
 // XXX change to Pretty for output writers?... except zeek?
 func (r *Record) Strings() ([]string, error) {
+	fmt.Println("REC STRINGS", r.Raw.String())
 	var ss []string
 	it := r.ZvalIter()
 	for _, col := range r.Descriptor.Type.Columns {
 		if it.Done() {
 			return nil, errors.New("record type/value mismatch")
 		}
+		pretty.Println("OUTER TYPE", col.Type)
 		val, isContainer, err := it.Next()
 		if err != nil {
 			return nil, err
@@ -211,6 +214,7 @@ func (r *Record) Strings() ([]string, error) {
 				return nil, errors.New("record type/value mismatch")
 			}
 			comma := ""
+			pretty.Println("INNER TYPE", innerType)
 			cit := r.ZvalIter()
 			for !cit.Done() {
 				val, container, err := it.Next()

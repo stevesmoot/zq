@@ -3,6 +3,7 @@ package filter_test
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -52,6 +53,7 @@ func runTest(filt string, record *zson.Record, expectedResult bool) error {
 		raw = strings.Join(strs, ",")
 	} else {
 		raw = fmt.Sprintf("(unprintable point: %s)", err)
+		raw += record.Raw.String()
 	}
 	if expectedResult {
 		return fmt.Errorf("Filter \"%s\" should have matched \"%s\"", filt, raw)
@@ -153,8 +155,8 @@ func TestFilters(t *testing.T) {
 		{"1 in nested", records[9], false},
 	}
 
-	for _, tt := range tests {
+	for k, tt := range tests {
 		err := runTest(tt.filter, tt.record, tt.expectedResult)
-		require.NoError(t, err)
+		require.NoError(t, err, "test index: "+strconv.Itoa(k), records[0])
 	}
 }

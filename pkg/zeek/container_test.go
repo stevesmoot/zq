@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/kr/pretty"
 	"github.com/mccanne/zq/ast"
 	"github.com/mccanne/zq/filter"
 	"github.com/mccanne/zq/pkg/zeek"
@@ -28,6 +29,7 @@ func runTest(valType string, valRaw string, containerType string, containerRaw s
 		Field:      &ast.FieldRead{Field: "f"},
 		Value:      ast.TypedValue{Type: valType, Value: valRaw},
 	}
+	pretty.Println("XCOMPARE", expr)
 
 	filt, err := filter.Compile(expr)
 	if err != nil {
@@ -41,17 +43,29 @@ func runTest(valType string, valRaw string, containerType string, containerRaw s
 	}
 	columns := []zeek.Column{{"f", containerTyp}}
 	d := zson.NewDescriptor(zeek.LookupTypeRecord(columns))
-	r, err := zson.NewRecordZeekStrings(d, containerRaw)
+	fmt.Println("CONTAINER RAW", containerRaw)
+	r, err := zson.NewTestRecord(d, containerRaw)
+	if err != nil {
+		fmt.Println("FAILX")
+		return err
+	}
+	fmt.Println(r.Raw.String())
+	fmt.Println(r.Strings())
 	if err != nil {
 		return err
 	}
 
 	// Apply the filter.
+	fmt.Println("APPLY FILTER")
 	result := filt(r)
+	fmt.Println("APPLY FILTER RESULT", result, expectedResult)
+
+	fmt.Println(result, expectedResult)
 
 	if result == expectedResult {
 		return nil
 	}
+
 	if expectedResult {
 		return fmt.Errorf("Should have found %s in %s", valRaw, containerRaw)
 	} else {
@@ -74,7 +88,7 @@ func recordType(typ string, n int) string {
 }
 
 func TestContainers(t *testing.T) {
-	t.Parallel()
+	//t.Parallel()
 
 	tests := []struct {
 		valType        string
@@ -101,8 +115,9 @@ func TestContainers(t *testing.T) {
 	for _, tt := range tests {
 		// Run each test case against both set and vector
 		containerType := fmt.Sprintf("set[%s]", tt.elementType)
+		fmt.Println("XRUN", tt.valType, tt.valRaw, containerType, tt.containerRaw, tt.expectedResult)
 		err := runTest(tt.valType, tt.valRaw, containerType, tt.containerRaw, tt.expectedResult)
-		require.NoError(t, err)
+		require.NoError(t, err, tt)
 
 		containerType = fmt.Sprintf("vector[%s]", tt.elementType)
 		err = runTest(tt.valType, tt.valRaw, containerType, tt.containerRaw, tt.expectedResult)
