@@ -54,7 +54,7 @@ func (c *Cut) cut(d *zson.Descriptor, in *zson.Record) (*zson.Record, error) {
 			// XXX put warning back
 			return nil, ErrNoField
 		}
-		zv = append(zv, in.Slice(colno)...)
+		zv = zval.Append(zv, in.Slice(colno), zeek.IsContainerType(column.Type))
 	}
 	return zson.NewRecordNoTs(d, zv), nil
 }
