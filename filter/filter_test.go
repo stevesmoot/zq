@@ -46,13 +46,8 @@ func runTest(filt string, record *zson.Record, expectedResult bool) error {
 	}
 
 	// Failure!  Try to assemble a useful error message.
-	var raw string
-	strs, err := record.ZeekStrings()
-	if err == nil {
-		raw = strings.Join(strs, ",")
-	} else {
-		raw = fmt.Sprintf("(record not zeek printable: %s)\nRAW: %s", err, record.Raw.String())
-	}
+	// Just use the zval pretty format of Raw.
+	raw := record.Raw.String()
 	if expectedResult {
 		return fmt.Errorf("Filter \"%s\" should have matched \"%s\"", filt, raw)
 	} else {

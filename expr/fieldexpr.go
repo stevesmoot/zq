@@ -126,7 +126,7 @@ outer:
 		}
 		e := r.TypedSlice(col)
 		for _, op := range ops {
-			e := op.apply(e)
+			e = op.apply(e)
 			if e.Type == nil {
 				break
 			}
