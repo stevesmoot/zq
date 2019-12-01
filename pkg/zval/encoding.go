@@ -82,30 +82,6 @@ func (e Encoding) Body() (Encoding, error) {
 	return body, nil
 }
 
-/*
-func (e Encoding) Contents() Encoding {
-	// Uvarint is zero for an unset zval; otherwise, it is the value's
-	// length plus one.
-	u64, n := Uvarint(e)
-	if n <= 0 {
-		// XXX this should only happen for internal bugs (outside data
-		// cannot cause such a corruption).  I think we should panic.
-		return nil
-	}
-	if tagIsUnset(u64) {
-		return e[:n]
-	}
-	end := n + tagLength(u64)
-	return e[n:end]
-}
-*/
-
-func New(b []byte) Encoding {
-	//XXX
-	return AppendValue(nil, b)
-
-}
-
 // AppendValue encodes each byte slice as a value Encoding, concatenates the
 // values as an aggregate, then encodes the aggregate as a container Encoding.
 func AppendContainer(dst Encoding, vals [][]byte) Encoding {
