@@ -3,6 +3,7 @@ package zeek
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/mccanne/zq/pkg/nano"
 	"github.com/mccanne/zq/pkg/zval"
@@ -29,7 +30,9 @@ func (t *TypeOfTime) New(value []byte) (Value, error) {
 	if value == nil {
 		return &Unset{}, nil
 	}
+	fmt.Println("TIMER NEW", string(value))
 	v, err := nano.Parse(value)
+	fmt.Println("NANO PARSE", v)
 	if err != nil {
 		return nil, err
 	}

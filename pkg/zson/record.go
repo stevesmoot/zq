@@ -7,6 +7,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/kr/pretty"
 	"github.com/mccanne/zq/pkg/nano"
 	"github.com/mccanne/zq/pkg/zeek"
 	"github.com/mccanne/zq/pkg/zval"
@@ -84,7 +85,7 @@ func NewVolatileRecord(d *Descriptor, ts nano.Ts, raw zval.Encoding) *Record {
 // record's timestamp is zero.  NewRecordZvals returns an error if the number of
 // descriptor columns and zvals do not agree or if parsing the ts zval fails.
 func NewRecordZvals(d *Descriptor, vals ...zval.Encoding) (t *Record, err error) {
-	raw, err := NewRawFromZvals(d, vals)
+	raw, err := EncodeZvals(d, vals)
 	if err != nil {
 		return nil, err
 	}
@@ -99,17 +100,18 @@ func NewRecordZvals(d *Descriptor, vals ...zval.Encoding) (t *Record, err error)
 	return NewRecord(d, ts, raw), nil
 }
 
-// NewRecordZeekStrings creates a record from Zeek UTF-8 strings.
-func NewRecordZeekStrings(d *Descriptor, ss ...string) (t *Record, err error) {
+// NewTestRecord creates a record from Zeek UTF-8 strings.  This is only
+// used for testing right now.
+func NewTestRecord(d *Descriptor, ss ...string) (t *Record, err error) {
 	vals := make([][]byte, 0, 32)
 	for _, s := range ss {
 		vals = append(vals, []byte(s))
 	}
-	raw, ts, err := NewRawAndTsFromZeekValues(d, d.TsCol, vals)
+	zv, err := EncodeZeekStrings(d, vals)
 	if err != nil {
 		return nil, err
 	}
-	return NewRecord(d, ts, raw), nil
+	return NewRecordNoTs(d, zv), nil
 }
 
 // ZvalIter returns an iterator over the receiver's zvals.
@@ -204,10 +206,22 @@ func (r *Record) Strings() ([]string, error) {
 		}
 		var elem string
 		if isContainer {
-			return nil, errors.New("record type/value mismatch")
-			elem, err = splat(col.Type, val)
-			if err != nil {
-				return nil, err
+			innerType := zeek.ContainedType(col.Type)
+			if innerType == nil {
+				return nil, errors.New("record type/value mismatch")
+			}
+			comma := ""
+			cit := r.ZvalIter()
+			for !cit.Done() {
+				val, container, err := it.Next()
+				if err != nil {
+					return nil, err
+				}
+				if container {
+					return nil, errors.New("record type/value mismatch")
+				}
+				elem += comma + ZvalToZeekString(innerType, val, false)
+				comma = ","
 			}
 		} else {
 			elem = ZvalToZeekString(col.Type, val, false)
@@ -220,8 +234,11 @@ func (r *Record) Strings() ([]string, error) {
 func (r *Record) ValueByColumn(col int) zeek.Value {
 	//XXX shouldn't ignore error
 	fmt.Println(col)
+	fmt.Println(len(r.Slice(col).Contents()))
 	fmt.Println(string(r.Slice(col).Contents()))
-	v, _ := r.Descriptor.Type.Columns[col].Type.New(r.Slice(col).Contents())
+	pretty.Println(r.Descriptor.Type.Columns[col])
+	v, err := r.Descriptor.Type.Columns[col].Type.New(r.Slice(col).Contents())
+	pretty.Println(v, err)
 	return v
 }
 
@@ -234,15 +251,15 @@ func (r *Record) ValueByField(field string) zeek.Value {
 	return nil
 }
 
-func (r *Record) Slice(column int) zval.Encoding {
-	envelope := r.SliceEnvelope(column)
+func (r *Record) OldSlice(column int) zval.Encoding {
+	envelope := r.Slice(column)
 	if envelope == nil {
 		return nil
 	}
 	return envelope.Contents()
 }
 
-func (r *Record) SliceEnvelope(column int) zval.Encoding {
+func (r *Record) Slice(column int) zval.Encoding {
 	var envelope zval.Encoding
 	for i, it := 0, zval.IterEncoding(r.Raw); i <= column; i++ {
 		if it.Done() {

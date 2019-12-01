@@ -159,7 +159,7 @@ func Unflatten(columns []zeek.Column, resolver *resolver.Table) (*zson.Descripto
 	cols := make([]zeek.Column, 0)
 	var nestedCols []zeek.Column
 	var nestedField string
-	for _, col := range(columns) {
+	for _, col := range columns {
 		// XXX could validate field names here...
 		if col.Name == "_path" {
 			hasPath = true
@@ -230,9 +230,9 @@ func (p *Parser) ParseValue(line []byte) (*zson.Record, error) {
 		}
 		p.descriptor = d
 	}
-	raw, ts, err := zson.NewRawAndTsFromZeekTSV(p.descriptor, []byte(p.path), line)
+	zv, ts, err := zson.EncodeZeek(p.descriptor, []byte(p.path), line)
 	if err != nil {
 		return nil, err
 	}
-	return zson.NewRecord(p.descriptor, ts, raw), nil
+	return zson.NewRecord(p.descriptor, ts, zv), nil
 }

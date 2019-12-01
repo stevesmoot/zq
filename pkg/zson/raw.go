@@ -11,8 +11,8 @@ import (
 	"github.com/mccanne/zq/pkg/zval"
 )
 
-// NewRawFromZvals builds a raw value from a descriptor and zvals.
-func NewRawFromZvals(d *Descriptor, vals []zval.Encoding) (zval.Encoding, error) {
+// EncodeZvals builds a raw value from a descriptor and zvals.
+func EncodeZvals(d *Descriptor, vals []zval.Encoding) (zval.Encoding, error) {
 	if nv, nc := len(vals), len(d.Type.Columns); nv != nc {
 		return nil, fmt.Errorf("got %d values (%q), expected %d (%q)", nv, vals, nc, d.Type.Columns)
 
@@ -24,12 +24,12 @@ func NewRawFromZvals(d *Descriptor, vals []zval.Encoding) (zval.Encoding, error)
 	return raw, nil
 }
 
-// NewRawAndTsFromJSON builds a raw value from a descriptor and the JSON object
+// EncodeJSON builds a raw value from a descriptor and the JSON object
 // in data.  It works in two steps.  First, it constructs a slice of views onto
 // the underlying JSON values.  This slice follows the order of the descriptor
 // columns.  Second, it appends the descriptor ID and the values to a new
 // buffer.
-func NewRawAndTsFromJSON(d *Descriptor, tsCol int, data []byte) (zval.Encoding, nano.Ts, int, error) {
+func EncodeJSON(d *Descriptor, tsCol int, data []byte) (zval.Encoding, nano.Ts, int, error) {
 	var droppedFields int
 	type jsonVal struct {
 		val []byte
@@ -112,7 +112,7 @@ func handleJSONTimestamp(data []byte) (nano.Ts, []byte, error) {
 	}
 }
 
-func NewRawAndTsFromZeekTSV(d *Descriptor, path []byte, data []byte) (zval.Encoding, nano.Ts, error) {
+func EncodeZeekLegacy(d *Descriptor, path []byte, data []byte) (zval.Encoding, nano.Ts, error) {
 	builder := zval.NewBuilder()
 	columns := d.Type.Columns
 	col := 0
@@ -154,10 +154,10 @@ func NewRawAndTsFromZeekTSV(d *Descriptor, path []byte, data []byte) (zval.Encod
 				builder.Begin()
 				if bytes.Compare(val, []byte(emptyContainer)) != 0 {
 					cstart := 0
-					for i, ch := range(val) {
+					for i, ch := range val {
 						if ch == setSeparator {
 							builder.Append(zeek.Unescape(val[cstart:i]))
-							cstart = i+1
+							cstart = i + 1
 						}
 					}
 					builder.Append(zeek.Unescape(val[cstart:]))
@@ -202,28 +202,21 @@ func NewRawAndTsFromZeekTSV(d *Descriptor, path []byte, data []byte) (zval.Encod
 	return builder.Encode(), ts, nil
 }
 
-func NewRawAndTsFromZeekValues(d *Descriptor, tsCol int, vals [][]byte) (zval.Encoding, nano.Ts, error) {
+func EncodeZeekStrings(d *Descriptor, vals [][]byte) (zval.Encoding, error) {
 	if nv, nc := len(vals), len(d.Type.Columns); nv != nc {
 		// Don't pass vals to fmt.Errorf or it will escape to the heap.
-		return nil, 0, fmt.Errorf("got %d values, expected %d", nv, nc)
+		return nil, fmt.Errorf("got %d values, expected %d", nv, nc)
 	}
+	//XXX this is only used by test
 	n := 2 // Estimate for descriptor ID uvarint.
 	for _, v := range vals {
 		n += len(v) + 1 // Estimate for zval and its length uvarint.
 	}
-	raw := make([]byte, 0, n)
-	var ts nano.Ts
+	zv := make(zval.Encoding, 0, n)
 	for i, val := range vals {
-		var err error
-		if i == tsCol {
-			ts, err = nano.Parse(val)
-			if err != nil {
-				return nil, 0, err
-			}
-		}
-		raw = appendZvalFromZeek(raw, d.Type.Columns[i].Type, val)
+		zv = appendZvalFromZeek(zv, d.Type.Columns[i].Type, val)
 	}
-	return raw, ts, nil
+	return zv, nil
 }
 
 var (
