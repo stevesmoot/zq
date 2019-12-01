@@ -275,6 +275,13 @@ func (r *Record) ValueByField(field string) zeek.Value {
 	return nil
 }
 
+func (r *Record) TypedSlice(colno int) zeek.TypedEncoding {
+	return zeek.TypedEncoding{
+		Type: r.Descriptor.Type.Columns[colno].Type,
+		Body: r.Slice(colno),
+	}
+}
+
 func (r *Record) Slice(column int) zval.Encoding {
 	var zv zval.Encoding
 	for i, it := 0, zval.Iter(r.Raw); i <= column; i++ {

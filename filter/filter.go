@@ -114,9 +114,9 @@ func CompileFieldCompare(node ast.CompareField, val zeek.Value) (Filter, error) 
 
 func EvalAny(eval zeek.Predicate) Filter {
 	return func(p *zson.Record) bool {
-		it := p.GenVals()
+		it := p.ZvalIter()
 		for _, c := range p.Type.Columns {
-			val, err := it.Next()
+			val, _, err := it.Next()
 			if err != nil {
 				return false
 			}

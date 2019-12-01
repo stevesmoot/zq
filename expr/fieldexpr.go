@@ -124,14 +124,13 @@ outer:
 			// original field doesn't exist
 			return zeek.TypedEncoding{}
 		}
-		typ := r.TypeOfColumn(col)
-		val := r.Slice(col)
+		e := r.TypedSlice(col)
 		for _, op := range ops {
-			e := op.apply(zeek.TypedEncoding{typ, val})
+			e := op.apply(e)
 			if e.Type == nil {
-				return zeek.TypedEncoding{}
+				break
 			}
 		}
-		return zeek.TypedEncoding{typ, val}
+		return e
 	}, nil
 }
