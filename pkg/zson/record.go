@@ -105,11 +105,11 @@ func NewRecordZeekStrings(d *Descriptor, ss ...string) (t *Record, err error) {
 	for _, s := range ss {
 		vals = append(vals, []byte(s))
 	}
-	zv, err := EncodeZeekStrings(d, vals)
+	zv, ts, err := NewRawAndTsFromZeekValues(d, d.TsCol, vals)
 	if err != nil {
 		return nil, err
 	}
-	return NewRecordNoTs(d, zv), nil
+	return NewRecord(d, ts, zv), nil
 }
 
 // ZvalIter returns an iterator over the receiver's zvals.

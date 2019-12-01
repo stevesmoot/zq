@@ -28,7 +28,7 @@ func TestNewRawAndTsFromJSON(t *testing.T) {
 	}
 	for _, c := range cases {
 		continue // XXX this is totally broken
-		raw, ts, _, err := EncodeJSON(d, tsCol, []byte(c.input))
+		raw, ts, _, err := NewRawAndTsFromJSON(d, tsCol, []byte(c.input))
 		fmt.Println(raw.String())
 		assert.NoError(t, err, "input: %s", c.input)
 		assert.Exactly(t, c.expectedTs, ts, "input: %s", c.input)

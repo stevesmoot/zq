@@ -24,12 +24,12 @@ func EncodeZvals(d *Descriptor, vals []zval.Encoding) (zval.Encoding, error) {
 	return raw, nil
 }
 
-// EncodeJSON builds a raw value from a descriptor and the JSON object
+// NewRawAndTsFromJSON builds a raw value from a descriptor and the JSON object
 // in data.  It works in two steps.  First, it constructs a slice of views onto
 // the underlying JSON values.  This slice follows the order of the descriptor
 // columns.  Second, it appends the descriptor ID and the values to a new
 // buffer.
-func EncodeJSON(d *Descriptor, tsCol int, data []byte) (zval.Encoding, nano.Ts, int, error) {
+func NewRawAndTsFromJSON(d *Descriptor, tsCol int, data []byte) (zval.Encoding, nano.Ts, int, error) {
 	var droppedFields int
 	type jsonVal struct {
 		val []byte
@@ -112,7 +112,7 @@ func handleJSONTimestamp(data []byte) (nano.Ts, []byte, error) {
 	}
 }
 
-func EncodeZeekLegacy(d *Descriptor, path []byte, data []byte) (zval.Encoding, nano.Ts, error) {
+func NewRawAndTsFromZeekTSV(d *Descriptor, path []byte, data []byte) (zval.Encoding, nano.Ts, error) {
 	builder := zval.NewBuilder()
 	columns := d.Type.Columns
 	col := 0
@@ -202,21 +202,28 @@ func EncodeZeekLegacy(d *Descriptor, path []byte, data []byte) (zval.Encoding, n
 	return builder.Encode(), ts, nil
 }
 
-func EncodeZeekStrings(d *Descriptor, vals [][]byte) (zval.Encoding, error) {
+func NewRawAndTsFromZeekValues(d *Descriptor, tsCol int, vals [][]byte) (zval.Encoding, nano.Ts, error) {
 	if nv, nc := len(vals), len(d.Type.Columns); nv != nc {
 		// Don't pass vals to fmt.Errorf or it will escape to the heap.
-		return nil, fmt.Errorf("got %d values, expected %d", nv, nc)
+		return nil, 0, fmt.Errorf("got %d values, expected %d", nv, nc)
 	}
-	//XXX this is only used by test
 	n := 2 // Estimate for descriptor ID uvarint.
 	for _, v := range vals {
 		n += len(v) + 1 // Estimate for zval and its length uvarint.
 	}
-	zv := make(zval.Encoding, 0, n)
+	raw := make([]byte, 0, n)
+	var ts nano.Ts
 	for i, val := range vals {
-		zv = appendZvalFromZeek(zv, d.Type.Columns[i].Type, val)
+		var err error
+		if i == tsCol {
+			ts, err = nano.Parse(val)
+			if err != nil {
+				return nil, 0, err
+			}
+		}
+		raw = appendZvalFromZeek(raw, d.Type.Columns[i].Type, val)
 	}
-	return zv, nil
+	return raw, ts, nil
 }
 
 var (

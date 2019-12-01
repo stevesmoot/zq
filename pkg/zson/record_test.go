@@ -82,18 +82,23 @@ func zunsetc() zval.Encoding {
 	return nil
 }
 
+func encode(d *Descriptor, vals [][]byte) (zval.Encoding, error) {
+	zv, _, err := NewRawAndTsFromZeekValues(d, -1, vals)
+	return zv, err
+}
+
 func TestEncodeZeekStrings(t *testing.T) {
 	typ, err := zeek.LookupType("record[_path:string,ts:time,data:string]")
 	require.NoError(t, err)
 	d := NewDescriptor(typ.(*zeek.TypeRecord))
 
-	_, err = EncodeZeekStrings(d, zs("some path", "123.456"))
+	_, err = encode(d, zs("some path", "123.456"))
 	assert.EqualError(t, err, "got 2 values, expected 3")
 
-	_, err = EncodeZeekStrings(d, zs("some path", "123.456", "some data", "unexpected"))
+	_, err = encode(d, zs("some path", "123.456", "some data", "unexpected"))
 	assert.EqualError(t, err, "got 4 values, expected 3")
 
-	zv, err := EncodeZeekStrings(d, zs("some path", "123.456", "some data"))
+	zv, err := encode(d, zs("some path", "123.456", "some data"))
 	assert.NoError(t, err)
 	r := NewRecordNoTs(d, zv)
 	assert.EqualValues(t, 123456000000, r.Ts)
@@ -102,7 +107,7 @@ func TestEncodeZeekStrings(t *testing.T) {
 	assert.EqualValues(t, "some data", r.Slice(2))
 	assert.Nil(t, r.Slice(3))
 
-	zv, err = EncodeZeekStrings(d, zs("some path", "123.456", ""))
+	zv, err = encode(d, zs("some path", "123.456", ""))
 	assert.NoError(t, err)
 	r = NewRecordNoTs(d, zv)
 	assert.EqualValues(t, 123456000000, r.Ts)
@@ -111,7 +116,7 @@ func TestEncodeZeekStrings(t *testing.T) {
 	assert.EqualValues(t, "", r.Slice(2))
 	assert.Nil(t, r.Slice(3))
 
-	zv, err = EncodeZeekStrings(d, zs("some path", "123.456", "-"))
+	zv, err = encode(d, zs("some path", "123.456", "-"))
 	assert.NoError(t, err)
 	r = NewRecordNoTs(d, zv)
 	assert.EqualValues(t, 123456000000, r.Ts)
@@ -136,7 +141,7 @@ func TestEncodeZeekStrings(t *testing.T) {
 		{zs("some path", "123.456", "987,65"), zvals(z("some path"), z("123.456"), zc("987", "65"))},
 	}
 	for i, c := range cases {
-		zv, err := EncodeZeekStrings(d, c.input)
+		zv, err := encode(d, c.input)
 		assert.NoError(t, err)
 		r := NewRecordNoTs(d, zv)
 		assert.EqualValues(t, 123456000000, r.Ts)
