@@ -73,7 +73,7 @@ func recordType(typ string, n int) string {
 }
 
 func TestContainers(t *testing.T) {
-	//t.Parallel()
+	t.Parallel()
 
 	tests := []struct {
 		valType        string
@@ -101,7 +101,7 @@ func TestContainers(t *testing.T) {
 		// Run each test case against both set and vector
 		containerType := fmt.Sprintf("set[%s]", tt.elementType)
 		err := runTest(tt.valType, tt.valRaw, containerType, tt.containerRaw, tt.expectedResult)
-		require.NoError(t, err, tt)
+		require.NoError(t, err)
 
 		containerType = fmt.Sprintf("vector[%s]", tt.elementType)
 		err = runTest(tt.valType, tt.valRaw, containerType, tt.containerRaw, tt.expectedResult)
