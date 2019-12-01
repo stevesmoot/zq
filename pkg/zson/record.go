@@ -237,10 +237,6 @@ func (r *Record) Strings() ([]string, error) {
 
 func (r *Record) ValueByColumn(col int) zeek.Value {
 	//XXX shouldn't ignore error
-	fmt.Println(col)
-	fmt.Println(len(r.Slice(col).Contents()))
-	fmt.Println(string(r.Slice(col).Contents()))
-	pretty.Println(r.Descriptor.Type.Columns[col])
 	v, err := r.Descriptor.Type.Columns[col].Type.New(r.Slice(col).Contents())
 	pretty.Println(v, err)
 	return v
@@ -376,45 +372,6 @@ func (r *Record) AccessTime(field string) (nano.Ts, error) {
 		return 0, ErrTypeMismatch
 	}
 	return typeTime.Parse(e.Encoding.Contents())
-}
-
-// Cut returns a slice of the receiver's raw values for the requested fields.
-// Note that the raw values must be copied if they will be used after the
-// receiver's Buffer is reclaimed.  If dest's underlying array is large enough,
-// Cut uses it for the returned slice.  Otherwise, a new array is allocated.
-// Cut returns nil if any field is missing from the receiver.
-func (r *Record) Cut(fields []string) zval.Encoding {
-	var zv zval.Encoding
-	for _, field := range fields {
-		if col, ok := r.Descriptor.LUT[field]; ok {
-			typ := r.Type.Columns[col].Type
-			zv = zval.Append(zv, r.Slice(col), zeek.IsContainerType(typ))
-		} else {
-			return nil
-		}
-	}
-	return zv
-}
-
-// second return value is a bitmap of which fields were found
-// XXX will not work properly if cutting >64 columns
-func (r *Record) CutTypes(fields []string) ([]zeek.Type, uint64) {
-	var found uint64
-	valid := true
-	n := len(fields)
-	cut := make([]zeek.Type, n)
-	for k, field := range fields {
-		if col, ok := r.Descriptor.LUT[field]; ok {
-			cut[k] = r.Descriptor.Type.Columns[col].Type
-			found |= 1 << k
-		} else {
-			valid = false
-		}
-	}
-	if valid {
-		return cut, found
-	}
-	return nil, found
 }
 
 // MarshalJSON implements json.Marshaler.

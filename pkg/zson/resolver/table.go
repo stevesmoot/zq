@@ -146,29 +146,6 @@ func (t *Table) AddColumns(r *zson.Record, cols []zeek.Column, vals []string) (*
 	return zson.NewRecordZvals(d, append(oldVals, newVals...)...)
 }
 
-// CreateCut returns a new record value derived by keeping only the fields
-// specified by name in the fields slice.
-func (t *Table) CreateCut(r *zson.Record, fields []string) (*zson.Record, uint64, error) {
-	//XXX this can be factored out
-	types, found := r.CutTypes(fields)
-	if types == nil {
-		return nil, found, nil
-	}
-	n := len(fields)
-	columns := make([]zeek.Column, n)
-	for k := 0; k < n; k++ {
-		columns[k].Name = fields[k]
-		columns[k].Type = types[k]
-	}
-	zv := r.Cut(fields)
-	if zv == nil {
-		return nil, found, nil
-	}
-	d := t.GetByColumns(columns)
-	rec := zson.NewRecordNoTs(d, zv)
-	return rec, found, nil
-}
-
 // Cache returns a cache of this table providing lockless lookups, but cannot
 // be used concurrently.
 func (t *Table) Cache() *Cache {

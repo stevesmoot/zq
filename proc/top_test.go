@@ -15,12 +15,12 @@ func TestTop(t *testing.T) {
 	resolver := resolver.NewTable()
 
 	fooDesc := resolver.GetByColumns([]zeek.Column{{"foo", zeek.TypeCount}})
-	r0, _ := zson.NewRecordZeekStrings(fooDesc, "-")
-	r1, _ := zson.NewRecordZeekStrings(fooDesc, "1")
-	r2, _ := zson.NewRecordZeekStrings(fooDesc, "2")
-	r3, _ := zson.NewRecordZeekStrings(fooDesc, "3")
-	r4, _ := zson.NewRecordZeekStrings(fooDesc, "4")
-	r5, _ := zson.NewRecordZeekStrings(fooDesc, "5")
+	r0, _ := zson.NewTestRecord(fooDesc, "-")
+	r1, _ := zson.NewTestRecord(fooDesc, "1")
+	r2, _ := zson.NewTestRecord(fooDesc, "2")
+	r3, _ := zson.NewTestRecord(fooDesc, "3")
+	r4, _ := zson.NewTestRecord(fooDesc, "4")
+	r5, _ := zson.NewTestRecord(fooDesc, "5")
 	fooBatch := zson.NewArray([]*zson.Record{r0, r1, r2, r3, r4, r5}, nano.MaxSpan)
 
 	test, err := proc.NewProcTestFromSource("top -limit 3 foo", resolver, []zson.Batch{fooBatch})
