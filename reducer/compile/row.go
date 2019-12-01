@@ -44,12 +44,7 @@ func (r *Row) Consume(rec *zson.Record) {
 	}
 }
 
-// XXX steve update comment and check that we handle different types ...?
-//  this isn't the same issue as group-by
-
 // Result creates a new record from the results of the reducers.
-// XXX this should use the forthcoming zson.Record fields "Values" and
-// not bother with making raw
 func (r *Row) Result(table *resolver.Table) *zson.Record {
 	n := len(r.Reducers)
 	columns := make([]zeek.Column, n)

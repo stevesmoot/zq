@@ -217,22 +217,23 @@ func trimInnerTypes(typ string, raw string) string {
 // returns true iff the predicate matched an element from the collection.
 func Contains(compare Predicate) Predicate {
 	return func(e TypedEncoding) bool {
-		var elType Type
+		var el TypedEncoding
 		switch typ := e.Type.(type) {
 		case *TypeSet:
-			elType = typ.innerType
+			el.Type = typ.innerType
 		case *TypeVector:
-			elType = typ.typ
+			el.Type = typ.typ
 		default:
 			return false
 		}
+
 		for it := e.Iter(); !it.Done(); {
-			val, _, err := it.Next()
+			var err error
+			el.Body, _, err = it.Next()
 			if err != nil {
 				return false
 			}
-			v := TypedEncoding{elType, val}
-			if compare(v) {
+			if compare(el) {
 				return true
 			}
 		}
