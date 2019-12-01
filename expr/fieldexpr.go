@@ -25,33 +25,31 @@ type FieldExprResolver func(*zson.Record) zeek.TypedEncoding
 // fieldop, arrayIndex, and fieldRead are helpers used internally
 // by CompileFieldExpr() below.
 type fieldop interface {
-	apply(zeek.Type, []byte) (zeek.Type, zval.Encoding)
+	apply(zeek.Type, []byte) zeek.TypedEncoding
 }
 
 type arrayIndex struct {
 	idx int64
 }
 
-func (ai *arrayIndex) apply(typ zeek.Type, val []byte) (zeek.Type, zval.Encoding) {
+func (ai *arrayIndex) apply(typ zeek.Type, val []byte) zeek.TypedEncoding {
 	elType, elVal, err := zeek.VectorIndex(typ, val, ai.idx)
 	if err != nil {
-		return nil, nil
+		return zeek.TypedEncoding{}
 	}
-	return elType, elVal
+	return zeek.TypedEncoding{elType, elVal}
 }
 
 type fieldRead struct {
 	field string
 }
 
-func (fr *fieldRead) apply(typ zeek.Type, val []byte) (zeek.Type, zval.Encoding) {
+func (fr *fieldRead) apply(typ zeek.Type, val []byte) zeek.TypedEncoding {
 	recType, ok := typ.(*zeek.TypeRecord)
 	if !ok {
 		// field reference on non-record type
-		return nil, nil
+		return zeek.TypedEncoding{}
 	}
-
-	// XXX steve to check this Loop
 
 	// XXX searching the list of columns for every record is
 	// expensive, but we can receive records with different
@@ -62,19 +60,19 @@ func (fr *fieldRead) apply(typ zeek.Type, val []byte) (zeek.Type, zval.Encoding)
 			it := zval.IterEncoding(val)
 			for i := 0; i <= n; i++ {
 				if it.Done() {
-					return nil, nil
+					return zeek.TypedEncoding{}
 				}
 				var err error
 				v, err = it.Next()
 				if err != nil {
-					return nil, nil
+					return zeek.TypedEncoding{}
 				}
 			}
-			return col.Type, v
+			return zeek.TypedEncoding{col.Type, v}
 		}
 	}
 	// record doesn't have the named field
-	return nil, nil
+	return zeek.TypedEncoding{}
 }
 
 // CompileFieldExpr() takes a FieldExpr AST (which represents either a
@@ -130,8 +128,8 @@ outer:
 		typ := r.TypeOfColumn(col)
 		val := r.Slice(col)
 		for _, op := range ops {
-			typ, val = op.apply(typ, val)
-			if typ == nil {
+			e := op.apply(typ, val)
+			if e.Type == nil {
 				return zeek.TypedEncoding{}
 			}
 		}
