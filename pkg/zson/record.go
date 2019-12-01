@@ -3,11 +3,9 @@ package zson
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net"
 	"strings"
 
-	"github.com/kr/pretty"
 	"github.com/mccanne/zq/pkg/nano"
 	"github.com/mccanne/zq/pkg/zeek"
 	"github.com/mccanne/zq/pkg/zval"
@@ -111,7 +109,6 @@ func NewTestRecord(d *Descriptor, ss ...string) (t *Record, err error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("ENCODE TEST REC", zv.String())
 	return NewRecordNoTs(d, zv), nil
 }
 
@@ -150,10 +147,15 @@ func (r *Record) Bytes() []byte {
 	return r.Raw
 }
 
+//XXX support sets of records?
+
 // splat formats a set or vector body as a value string.  This isn't
 // a valid zeek string or valid zson but it's useful for things like a
 // group-by key when grouping by a field that has set or vector values.
-func splat(inner zeek.Type, zv zval.Encoding) (string, error) {
+func splatContainer(inner zeek.Type, zv zval.Encoding) (string, error) {
+	//if inner == nil {
+	//	return ZvalToZeekString(typ, nil, true), nil
+	//}
 	comma := false
 	var b strings.Builder
 	it := zval.Iter(zv)
@@ -162,18 +164,29 @@ func splat(inner zeek.Type, zv zval.Encoding) (string, error) {
 		if err != nil {
 			return "", err
 		}
+		var elem string
 		if isContainer {
-			// Record splats are not allowed and sets/vectors
-			// cannot be inside of anoter container.
-			return "", ErrTypeMismatch
+			// The only containers allowed in sets and vectors are records...
+			recType, ok := inner.(*zeek.TypeRecord)
+			if !ok {
+				return "", ErrTypeMismatch
+			}
+			// stringify nested records... this isn't a format
+			// for properly encoding arbitrary zson.
+			v, err := splatRecord(recType, val)
+			if err != nil {
+				return "", err
+			}
+			elem = "[" + strings.Join(v, ",") + "]"
+		} else {
+			elem = ZvalToZeekString(inner, val, true)
 		}
 		if comma {
 			b.WriteString(",")
 		} else {
 			comma = true
 		}
-		b.WriteString(string(val.Bytes()))
-		//ZvalToZeekString(inner, val, false))
+		b.WriteString(elem)
 	}
 	return b.String(), nil
 }
@@ -187,58 +200,60 @@ func Splat(typ zeek.Type, zv zval.Encoding) (string, error) {
 	if inner == nil {
 		return ZvalToZeekString(typ, zv, true), nil
 	}
-	s, err := splat(inner, zv)
+	s, err := splatContainer(inner, zv)
 	return s, err
 }
 
-// This returns the zeek strings for this record.  It works only for records
-// that can be represented as legacy zeek values.  XXX We need to not use this.
-// XXX change to Pretty for output writers?... except zeek?
-func (r *Record) Strings() ([]string, error) {
-	fmt.Println("REC STRINGS", r.Raw.String())
-	var ss []string
-	it := r.ZvalIter()
-	for _, col := range r.Descriptor.Type.Columns {
+func splatRecord(typ *zeek.TypeRecord, zv zval.Encoding) ([]string, error) {
+	var out []string
+	it := zv.Iter()
+	for _, col := range typ.Columns {
 		if it.Done() {
 			return nil, errors.New("record type/value mismatch")
 		}
-		pretty.Println("OUTER TYPE", col.Type)
 		val, isContainer, err := it.Next()
 		if err != nil {
 			return nil, err
 		}
 		var elem string
 		if isContainer {
-			innerType := zeek.ContainedType(col.Type)
-			if innerType == nil {
-				return nil, errors.New("record type/value mismatch")
-			}
-			comma := ""
-			pretty.Println("INNER TYPE", innerType)
-			cit := r.ZvalIter()
-			for !cit.Done() {
-				val, container, err := it.Next()
+			recType, ok := col.Type.(*zeek.TypeRecord)
+			if ok {
+				// stringify nested records... this isn't a format
+				// for properly encoding arbitrary zson.
+				v, err := splatRecord(recType, val)
 				if err != nil {
 					return nil, err
 				}
-				if container {
+				elem = "[" + strings.Join(v, ",") + "]"
+			} else {
+				innerType := zeek.ContainedType(col.Type)
+				if innerType == nil {
 					return nil, errors.New("record type/value mismatch")
 				}
-				elem += comma + ZvalToZeekString(innerType, val, false)
-				comma = ","
+				elem, err = splatContainer(innerType, val)
+				if err != nil {
+					return nil, err
+				}
 			}
 		} else {
 			elem = ZvalToZeekString(col.Type, val, false)
 		}
-		ss = append(ss, elem)
+		out = append(out, elem)
 	}
-	return ss, nil
+	return out, nil
+}
+
+// This returns the zeek strings for this record.  It works only for records
+// that can be represented as legacy zeek values.  XXX We need to not use this.
+// XXX change to Pretty for output writers?... except zeek?
+func (r *Record) Strings() ([]string, error) {
+	return splatRecord(r.Descriptor.Type, r.Raw)
 }
 
 func (r *Record) ValueByColumn(col int) zeek.Value {
 	//XXX shouldn't ignore error
-	v, err := r.Descriptor.Type.Columns[col].Type.New(r.Slice(col).Contents())
-	pretty.Println(v, err)
+	v, _ := r.Descriptor.Type.Columns[col].Type.New(r.Slice(col).Contents())
 	return v
 }
 

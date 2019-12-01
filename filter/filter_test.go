@@ -52,8 +52,7 @@ func runTest(filt string, record *zson.Record, expectedResult bool) error {
 	if err == nil {
 		raw = strings.Join(strs, ",")
 	} else {
-		raw = fmt.Sprintf("(unprintable point: %s)", err)
-		raw += record.Raw.String()
+		raw = fmt.Sprintf("(unprintable record: %s)\nRAW: %s", err, record.Raw.String())
 	}
 	if expectedResult {
 		return fmt.Errorf("Filter \"%s\" should have matched \"%s\"", filt, raw)
@@ -99,6 +98,10 @@ func TestFilters(t *testing.T) {
 		if rec == nil {
 			break
 		}
+		rec.Keep()
+		s, _ := rec.Strings()
+		fmt.Println("DEBUG PARSE", s)
+		fmt.Println("DEBUG PARSE RAW", rec.Raw.String())
 		records = append(records, rec)
 	}
 
@@ -156,7 +159,14 @@ func TestFilters(t *testing.T) {
 	}
 
 	for k, tt := range tests {
+		if k != 21 {
+			continue
+		}
 		err := runTest(tt.filter, tt.record, tt.expectedResult)
-		require.NoError(t, err, "test index: "+strconv.Itoa(k), records[0])
+		if err != nil {
+			s, _ := tt.record.Strings()
+			fmt.Println(tt.filter, s)
+		}
+		require.NoError(t, err, tt.filter, "test index: "+strconv.Itoa(k), records[0])
 	}
 }

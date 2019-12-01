@@ -245,9 +245,8 @@ func Contains(compare Predicate) Predicate {
 	}
 }
 
-//XXX we shouldn't need this
 func ContainerLength(e TypedEncoding) (int, error) {
-	val := e.Encoding
+	val := e.Encoding.Contents()
 	switch e.Type.(type) {
 	case *TypeSet, *TypeVector:
 		if val == nil {
@@ -266,28 +265,30 @@ func ContainerLength(e TypedEncoding) (int, error) {
 	}
 }
 
+//XXX this should go in vector.go
+
 // If the passed-in element is a vector, attempt to get the idx'th
 // element, and return its type and raw representation.  Returns an
 // error if the passed-in element is not a vector or if idx is
 // outside the vector bounds.
-func VectorIndex(typ Type, val []byte, idx int64) (Type, []byte, error) {
-	vec, ok := typ.(*TypeVector)
+func VectorIndex(e TypedEncoding, idx int64) (TypedEncoding, error) {
+	vec, ok := e.Type.(*TypeVector)
 	if !ok {
-		return nil, nil, ErrNotVector
+		return TypedEncoding{}, ErrNotVector
 	}
 	if idx < 0 {
-		return nil, nil, ErrIndex
+		return TypedEncoding{}, ErrIndex
 	}
-	for i, it := 0, zval.Iter(val); !it.Done(); i++ {
-		v, _, err := it.Next()
+	for i, it := 0, zval.IterEncoding(e.Encoding.Contents()); !it.Done(); i++ {
+		envelope, err := it.Next()
 		if err != nil {
-			return nil, nil, err
+			return TypedEncoding{}, err
 		}
 		if i == int(idx) {
-			return vec.typ, v, nil
+			return TypedEncoding{vec.typ, envelope}, nil
 		}
 	}
-	return nil, nil, ErrIndex
+	return TypedEncoding{}, ErrIndex
 }
 
 // LookupTypeRecord returns a zeek.TypeRecord for the indicated columns.  If it

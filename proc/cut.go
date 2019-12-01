@@ -83,9 +83,8 @@ func (c *Cut) Pull() (zson.Batch, error) {
 		}
 		recs = append(recs, out)
 	}
-	if recs == nil {
+	if len(recs) == 0 {
 		return nil, nil
 	}
-	//XXX we should compute a new span here because some records may be dropped
 	return zson.NewArray(recs, batch.Span()), nil
 }

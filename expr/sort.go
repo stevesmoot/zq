@@ -54,7 +54,7 @@ func NewSortFn(dir int, fields ...FieldExprResolver) SortFn {
 			// If values are of different types, just compare
 			// the string representation of the type
 			if !zeek.SameType(a.Type, b.Type) {
-				return rawcompare([]byte(a.Type.String()), []byte(b.Type.String()), dir)
+				return bytescompare([]byte(a.Type.String()), []byte(b.Type.String()), dir)
 			}
 
 			sf, ok := sorters[&a.Type]

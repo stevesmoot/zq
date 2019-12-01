@@ -90,7 +90,7 @@ func (s *Set) String() string {
 }
 
 func (s *Set) Encode(dst zval.Encoding) zval.Encoding {
-	var zv zval.Encoding
+	zv := make(zval.Encoding, 0)
 	for _, v := range s.values {
 		zv = v.Encode(zv)
 	}

@@ -25,27 +25,27 @@ type FieldExprResolver func(*zson.Record) zeek.TypedEncoding
 // fieldop, arrayIndex, and fieldRead are helpers used internally
 // by CompileFieldExpr() below.
 type fieldop interface {
-	apply(zeek.Type, []byte) zeek.TypedEncoding
+	apply(zeek.TypedEncoding) zeek.TypedEncoding
 }
 
 type arrayIndex struct {
 	idx int64
 }
 
-func (ai *arrayIndex) apply(typ zeek.Type, val []byte) zeek.TypedEncoding {
-	elType, elVal, err := zeek.VectorIndex(typ, val, ai.idx)
+func (ai *arrayIndex) apply(e zeek.TypedEncoding) zeek.TypedEncoding {
+	el, err := zeek.VectorIndex(e, ai.idx)
 	if err != nil {
 		return zeek.TypedEncoding{}
 	}
-	return zeek.TypedEncoding{elType, elVal}
+	return el
 }
 
 type fieldRead struct {
 	field string
 }
 
-func (fr *fieldRead) apply(typ zeek.Type, val []byte) zeek.TypedEncoding {
-	recType, ok := typ.(*zeek.TypeRecord)
+func (fr *fieldRead) apply(e zeek.TypedEncoding) zeek.TypedEncoding {
+	recType, ok := e.Type.(*zeek.TypeRecord)
 	if !ok {
 		// field reference on non-record type
 		return zeek.TypedEncoding{}
@@ -57,7 +57,7 @@ func (fr *fieldRead) apply(typ zeek.Type, val []byte) zeek.TypedEncoding {
 	for n, col := range recType.Columns {
 		if col.Name == fr.field {
 			var v []byte
-			it := zval.IterEncoding(val)
+			it := zval.IterEncoding(e.Encoding.Contents())
 			for i := 0; i <= n; i++ {
 				if it.Done() {
 					return zeek.TypedEncoding{}
@@ -128,7 +128,7 @@ outer:
 		typ := r.TypeOfColumn(col)
 		val := r.Slice(col)
 		for _, op := range ops {
-			e := op.apply(typ, val)
+			e := op.apply(typ, val.Contents())
 			if e.Type == nil {
 				return zeek.TypedEncoding{}
 			}

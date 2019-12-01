@@ -97,6 +97,9 @@ again:
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("READER LINE", string(line))
+	fmt.Println("READER RAW", rec.Raw.String())
+	fmt.Println("READER DESC", rec.Descriptor.Type.String())
 	r.stats.RecordsRead++
 	return rec, nil
 }

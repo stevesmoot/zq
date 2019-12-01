@@ -74,7 +74,7 @@ func (v *Vector) String() string {
 }
 
 func (v *Vector) Encode(dst zval.Encoding) zval.Encoding {
-	var zv zval.Encoding
+	zv := make(zval.Encoding, 0)
 	for _, val := range v.values {
 		zv = val.Encode(zv)
 	}
