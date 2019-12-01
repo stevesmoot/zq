@@ -28,6 +28,7 @@ func runTest(valType string, valRaw string, containerType string, containerRaw s
 		Field:      &ast.FieldRead{Field: "f"},
 		Value:      ast.TypedValue{Type: valType, Value: valRaw},
 	}
+
 	filt, err := filter.Compile(expr)
 	if err != nil {
 		return err
@@ -47,10 +48,10 @@ func runTest(valType string, valRaw string, containerType string, containerRaw s
 
 	// Apply the filter.
 	result := filt(r)
+
 	if result == expectedResult {
 		return nil
 	}
-
 	if expectedResult {
 		return fmt.Errorf("Should have found %s in %s", valRaw, containerRaw)
 	} else {
@@ -109,7 +110,6 @@ func TestContainers(t *testing.T) {
 
 		//XXX for records, just make sure they parse for now.
 		// there is no ast/filter support for them yet
-
 		containerType = recordType(tt.elementType, tt.containerLen)
 		parsedType, err := zeek.LookupType(containerType)
 		require.NoError(t, err)
