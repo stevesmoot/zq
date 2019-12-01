@@ -2,9 +2,7 @@ package zson
 
 import (
 	"encoding/json"
-	"errors"
 	"net"
-	"strings"
 
 	"github.com/mccanne/zq/pkg/nano"
 	"github.com/mccanne/zq/pkg/zeek"
@@ -98,8 +96,7 @@ func NewRecordZvals(d *Descriptor, vals ...zval.Encoding) (t *Record, err error)
 	return NewRecord(d, ts, raw), nil
 }
 
-// NewRecordZeekStrings creates a record from Zeek UTF-8 strings.  This is only
-// used for testing right now.
+// NewRecordZeekStrings creates a record from Zeek UTF-8 strings.
 func NewRecordZeekStrings(d *Descriptor, ss ...string) (t *Record, err error) {
 	vals := make([][]byte, 0, 32)
 	for _, s := range ss {
@@ -142,103 +139,6 @@ func (r *Record) Bytes() []byte {
 	return r.Raw
 }
 
-//XXX support sets of records?
-
-// splat formats a set or vector body as a value string.  This isn't
-// a valid zeek string or valid zson but it's useful for things like a
-// group-by key when grouping by a field that has set or vector values.
-func splatContainer(inner zeek.Type, zv zval.Encoding) (string, error) {
-	//if inner == nil {
-	//	return ZvalToZeekString(typ, nil, true), nil
-	//}
-	comma := false
-	var b strings.Builder
-	it := zval.Iter(zv)
-	for !it.Done() {
-		val, isContainer, err := it.Next()
-		if err != nil {
-			return "", err
-		}
-		var elem string
-		if isContainer {
-			// The only containers allowed in sets and vectors are records...
-			recType, ok := inner.(*zeek.TypeRecord)
-			if !ok {
-				return "", ErrTypeMismatch
-			}
-			// stringify nested records... this isn't a format
-			// for properly encoding arbitrary zson.
-			v, err := splatRecord(recType, val)
-			if err != nil {
-				return "", err
-			}
-			elem = "[" + strings.Join(v, ",") + "]"
-		} else {
-			elem = ZvalToZeekString(inner, val, true)
-		}
-		if comma {
-			b.WriteString(",")
-		} else {
-			comma = true
-		}
-		b.WriteString(elem)
-	}
-	return b.String(), nil
-}
-
-func Splat(typ zeek.Type, zv zval.Encoding) (string, error) {
-	_, ok := typ.(*zeek.TypeRecord)
-	if ok {
-		return "", errors.New("zson record values cannot be flattened")
-	}
-	inner := zeek.ContainedType(typ)
-	if inner == nil {
-		return ZvalToZeekString(typ, zv, true), nil
-	}
-	s, err := splatContainer(inner, zv)
-	return s, err
-}
-
-func splatRecord(typ *zeek.TypeRecord, zv zval.Encoding) ([]string, error) {
-	var out []string
-	it := zv.Iter()
-	for _, col := range typ.Columns {
-		if it.Done() {
-			return nil, errors.New("record type/value mismatch")
-		}
-		val, isContainer, err := it.Next()
-		if err != nil {
-			return nil, err
-		}
-		var elem string
-		if isContainer {
-			recType, ok := col.Type.(*zeek.TypeRecord)
-			if ok {
-				// stringify nested records... this isn't a format
-				// for properly encoding arbitrary zson.
-				v, err := splatRecord(recType, val)
-				if err != nil {
-					return nil, err
-				}
-				elem = "[" + strings.Join(v, ",") + "]"
-			} else {
-				innerType := zeek.ContainedType(col.Type)
-				if innerType == nil {
-					return nil, errors.New("record type/value mismatch")
-				}
-				elem, err = splatContainer(innerType, val)
-				if err != nil {
-					return nil, err
-				}
-			}
-		} else {
-			elem = ZvalToZeekString(col.Type, val, false)
-		}
-		out = append(out, elem)
-	}
-	return out, nil
-}
-
 // This returns the zeek strings for this record.  It works only for records
 // that can be represented as legacy zeek values.  XXX We need to not use this.
 // XXX change to Pretty for output writers?... except zeek?
@@ -270,13 +170,6 @@ func (r *Record) ValueByField(field string) zeek.Value {
 	return nil
 }
 
-func (r *Record) TypedSlice(colno int) zeek.TypedEncoding {
-	return zeek.TypedEncoding{
-		Type: r.Descriptor.Type.Columns[colno].Type,
-		Body: r.Slice(colno),
-	}
-}
-
 func (r *Record) Slice(column int) zval.Encoding {
 	var zv zval.Encoding
 	for i, it := 0, zval.Iter(r.Raw); i <= column; i++ {
@@ -290,6 +183,13 @@ func (r *Record) Slice(column int) zval.Encoding {
 		}
 	}
 	return zv
+}
+
+func (r *Record) TypedSlice(colno int) zeek.TypedEncoding {
+	return zeek.TypedEncoding{
+		Type: r.Descriptor.Type.Columns[colno].Type,
+		Body: r.Slice(colno),
+	}
 }
 
 func (r *Record) String(column int) string {
