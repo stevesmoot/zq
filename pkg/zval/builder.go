@@ -96,9 +96,6 @@ func (b *Builder) encode(dst []byte, off int) (Encoding, int) {
 	if dfs == beginContainer {
 		// skip over start token
 		off++
-		if b.nodes[off].dfs == endContainer {
-			return AppendUvarint(dst, containerTagUnset), off + 1
-		}
 		dst = AppendUvarint(dst, containerTag(node.innerLen))
 		for off < len(b.nodes) {
 			var next int

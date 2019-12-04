@@ -306,9 +306,15 @@ func zsonParseField(builder *zval.Builder, b []byte) ([]byte, error) {
 	if b[0] == leftbracket {
 		return zsonParseContainer(builder, b)
 	}
-	if len(b) >= 2 && b[0] == '-' && b[1] == ';' {
-		builder.Append(nil)
-		return b[2:], nil
+	if len(b) >= 2 && b[1] == ';' {
+		if b[0] == '-' {
+			builder.AppendUnsetValue()
+			return b[2:], nil
+		}
+		if b[0] == '*' {
+			builder.AppendUnsetContainer()
+			return b[2:], nil
+		}
 	}
 	to := 0
 	from := 0
