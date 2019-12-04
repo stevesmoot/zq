@@ -2,7 +2,6 @@ package ndjson
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 
 	"github.com/mccanne/zq/pkg/skim"
@@ -51,7 +50,5 @@ again:
 		return nil, err
 	}
 	desc := r.resolver.GetByColumns(typ.(*zeek.TypeRecord).Columns)
-	rr := zson.NewRecord(desc, 0, raw)
-	fmt.Println(rr.Raw.String())
-	return rr, nil
+	return zson.NewRecord(desc, 0, raw), nil
 }
