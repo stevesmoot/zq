@@ -155,7 +155,7 @@ func TestZjson(t *testing.T) {
 	boomerangZJSON(t, zson4)
 	boomerangZJSON(t, zson5)
 	boomerangZJSON(t, zson6)
-	boomerangZJSON(t, zson7) // XXX failing right now
+	boomerangZJSON(t, zson7)
 	boomerangZJSON(t, zsonBig())
 }
 
