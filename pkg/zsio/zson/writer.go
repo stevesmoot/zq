@@ -59,6 +59,10 @@ func (w *Writer) writeContainer(val []byte) error {
 	if err := w.write("["); err != nil {
 		return err
 	}
+	if val == nil {
+		w.write("*;")
+		return nil
+	}
 	if len(val) > 0 {
 		for it := zval.Iter(val); !it.Done(); {
 			v, container, err := it.Next()

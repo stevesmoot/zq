@@ -147,7 +147,12 @@ func NewRawAndTsFromZeekTSV(d *Descriptor, path []byte, data []byte) (zval.Encod
 		}
 
 		if len(val) == 1 && val[0] == '-' {
-			builder.Append(nil)
+			switch typ.(type) {
+			case *zeek.TypeSet, *zeek.TypeVector:
+				builder.AppendUnsetContainer()
+			default:
+				builder.AppendUnsetValue()
+			}
 		} else {
 			switch typ.(type) {
 			case *zeek.TypeSet, *zeek.TypeVector:
