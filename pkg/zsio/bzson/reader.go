@@ -105,7 +105,8 @@ func (r *Reader) parseValue(id int, b []byte) (*zson.Record, error) {
 		return nil, zson.ErrDescriptorInvalid
 	}
 	record := zson.NewVolatileRecord(descriptor, nano.MinTs, b)
-	if !record.TypeCheck() {
+	if err := record.TypeCheck(); err != nil {
+		panic(err)
 		return nil, zson.ErrTypeMismatch
 	}
 	//XXX this should go in NewRecord?
