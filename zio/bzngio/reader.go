@@ -196,5 +196,8 @@ func (r *Reader) parseValue(id int, b []byte) (*zng.Record, error) {
 		return nil, zng.ErrDescriptorInvalid
 	}
 	record := zng.NewVolatileRecord(typ, nano.MinTs, b)
-	return record, record.TypeCheck()
+	if err := record.TypeCheck(); err != nil {
+		return nil, err
+	}
+	return record, record.LiftTs()
 }

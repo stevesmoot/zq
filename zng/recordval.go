@@ -62,20 +62,24 @@ func NewRecordTs(typ *TypeRecord, ts nano.Ts, raw zcode.Bytes) *Record {
 
 func NewRecord(typ *TypeRecord, zv zcode.Bytes) (*Record, error) {
 	r := NewRecordTs(typ, 0, zv)
-	if typ.TsCol == 0 {
-		return r, nil
+	return r, r.LiftTs()
+}
+
+func (r *Record) LiftTs() error {
+	if r.Type.TsCol < 0 {
+		return nil
 	}
-	body, err := r.Slice(typ.TsCol)
+	body, err := r.Slice(r.Type.TsCol)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if body != nil {
 		r.Ts, err = DecodeTime(body)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
-	return r, nil
+	return nil
 }
 
 func NewRecordCheck(typ *TypeRecord, ts nano.Ts, raw zcode.Bytes) (*Record, error) {
