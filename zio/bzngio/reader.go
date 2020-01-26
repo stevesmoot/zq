@@ -56,7 +56,7 @@ again:
 	if code&0x80 != 0 {
 		switch code {
 		case zng.TypeDefRecord:
-			_, err = r.readTypeRecord()
+			err = r.readTypeRecord()
 		case zng.TypeDefSet:
 			err = r.readTypeSet()
 		case zng.TypeDefArray:
@@ -137,23 +137,24 @@ func (r *Reader) readColumn() (zng.Column, error) {
 	return zng.NewColumn(name, typ), nil
 }
 
-func (r *Reader) readTypeRecord() (*zng.TypeRecord, error) {
+func (r *Reader) readTypeRecord() error {
 	ncol, err := r.readUvarint()
 	if err != nil {
-		return nil, zng.ErrBadFormat
+		return zng.ErrBadFormat
 	}
 	if ncol == 0 {
-		return nil, errors.New("type record: zero columns not allowed")
+		return errors.New("type record: zero columns not allowed")
 	}
 	var columns []zng.Column
 	for k := 0; k < int(ncol); k++ {
 		col, err := r.readColumn()
 		if err != nil {
-			return nil, err
+			return err
 		}
 		columns = append(columns, col)
 	}
-	return r.zctx.LookupTypeRecord(columns), nil
+	r.zctx.LookupTypeRecord(columns)
+	return nil
 }
 
 func (r *Reader) readTypeSet() error {
@@ -195,13 +196,5 @@ func (r *Reader) parseValue(id int, b []byte) (*zng.Record, error) {
 		return nil, zng.ErrDescriptorInvalid
 	}
 	record := zng.NewVolatileRecord(typ, nano.MinTs, b)
-	if err := record.TypeCheck(); err != nil {
-		return nil, err
-	}
-	//XXX this should go in NewRecord?
-	ts, err := record.AccessTime("ts")
-	if err == nil {
-		record.Ts = ts
-	}
-	return record, nil
+	return record, record.TypeCheck()
 }
