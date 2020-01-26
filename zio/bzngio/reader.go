@@ -19,14 +19,12 @@ const (
 
 type Reader struct {
 	peeker *peeker.Reader
-	mapper *resolver.Mapper
 	zctx   *resolver.Context
 }
 
 func NewReader(reader io.Reader, zctx *resolver.Context) *Reader {
 	return &Reader{
 		peeker: peeker.NewReader(reader, ReadSize, MaxSize),
-		mapper: resolver.NewMapper(zctx),
 		zctx:   resolver.NewContext(),
 	}
 }
@@ -58,11 +56,7 @@ again:
 	if code&0x80 != 0 {
 		switch code {
 		case zng.TypeDefRecord:
-			var typ *zng.TypeRecord
-			typ, err = r.readTypeRecord()
-			if err == nil {
-				r.mapper.Enter(typ.ID(), typ)
-			}
+			_, err = r.readTypeRecord()
 		case zng.TypeDefSet:
 			err = r.readTypeSet()
 		case zng.TypeDefArray:
@@ -196,7 +190,7 @@ func (r *Reader) readTypeVector() error {
 }
 
 func (r *Reader) parseValue(id int, b []byte) (*zng.Record, error) {
-	typ := r.mapper.Map(id)
+	typ := r.zctx.Lookup(id)
 	if typ == nil {
 		return nil, zng.ErrDescriptorInvalid
 	}
