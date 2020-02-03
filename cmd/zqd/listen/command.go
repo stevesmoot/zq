@@ -30,6 +30,7 @@ type Command struct {
 func New(parent charm.Command, f *flag.FlagSet) (charm.Command, error) {
 	c := &Command{Command: parent.(*root.Command)}
 	f.StringVar(&c.listenAddr, "l", ":9867", "[addr]:port to listen on")
+	f.BoolVar(&zqd.UseTimeIndex, "T", false, "enable time index")
 	return c, nil
 }
 

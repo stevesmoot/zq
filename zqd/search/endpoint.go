@@ -12,7 +12,8 @@ import (
 
 	"github.com/mccanne/zq/ast"
 	"github.com/mccanne/zq/pkg/nano"
-	"github.com/mccanne/zq/zio/detector"
+	"github.com/mccanne/zq/zbuf"
+	"github.com/mccanne/zq/zio/bzngio"
 	"github.com/mccanne/zq/zng/resolver"
 	"github.com/mccanne/zq/zqd/api"
 )
@@ -82,7 +83,10 @@ func httpError(w http.ResponseWriter, msg string, code int) {
 	http.Error(w, string(b), code)
 }
 
-func Handle(w http.ResponseWriter, r *http.Request) {
+//XXX sync.Map
+var index = make(map[string]bzngio.Index)
+
+func Handle(w http.ResponseWriter, r *http.Request, useIndex bool) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "bad method", http.StatusBadRequest)
 		return
@@ -93,16 +97,33 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//logger.Debug("parseSearchRequest", zap.Stringer("query", query))
-	dataPath := filepath.Join(".", query.Space, "all.bzng") //XXX need root dir param
-	f, err := os.Open(dataPath)
+	path := filepath.Join(".", query.Space, "all.bzng") //XXX need root dir param
+	f, err := os.Open(path)
 	if err != nil {
 		httpError(w, "no such space: "+query.Space, http.StatusNotFound)
 		return
 	}
 	defer f.Close()
 	zctx := resolver.NewContext()
-	zngReader := detector.LookupReader("bzng", f, zctx)
-	mux, err := launch(r.Context(), query, zngReader, zctx)
+	var reader zbuf.Reader
+	if !useIndex {
+		reader = bzngio.NewReader(f, zctx)
+	} else if idx, ok := index[path]; ok {
+		reader, err = bzngio.NewRangeReader(f, zctx, idx, query.Span)
+		if err != nil {
+			httpError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	} else {
+		r := bzngio.NewIndexReader(f, zctx)
+		defer func() {
+			index[path] = r.Index
+			fmt.Println(r.Index)
+			fmt.Println(path)
+		}()
+		reader = r
+	}
+	mux, err := launch(r.Context(), query, reader, zctx)
 	if err != nil {
 		httpError(w, err.Error(), http.StatusBadRequest)
 		return
@@ -113,7 +134,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 		msg := fmt.Sprintf("unsupported output format: %s", format)
 		httpError(w, msg, http.StatusBadRequest)
 		return
-	case "zjson", "json":
+	case "zjson", "json", "":
 		s, err := newJSON(r, w, defaultMTU)
 		if err != nil {
 			httpError(w, err.Error(), http.StatusBadRequest)

@@ -9,11 +9,38 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mccanne/zq/pkg/nano"
 	"github.com/mccanne/zq/zio/detector"
 	"github.com/mccanne/zq/zng"
 	"github.com/mccanne/zq/zng/resolver"
 	"github.com/mccanne/zq/zqd/api"
 )
+
+type Info struct {
+	Size    int64
+	MinTime nano.Ts
+	MaxTime nano.Ts
+}
+
+type Offset struct {
+	Ts    nano.Ts
+	Index uint64
+}
+
+func Open(spaceName string) (*Info, error) {
+	root := "."
+	path := filepath.Join(root, spaceName, "all.bzng")
+	info, err := spaceInfo(path)
+	if err != nil {
+		return nil, err
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	f.Close() //XXX
+	return info, nil
+}
 
 func HandleList(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -42,7 +69,7 @@ func HandleList(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(spaces)
 }
 
-func spaceInfo(spaceName, path string) (*api.SpaceInfo, error) {
+func spaceInfo(path string) (*Info, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -69,13 +96,15 @@ func spaceInfo(spaceName, path string) (*api.SpaceInfo, error) {
 	if first == nil {
 		return nil, errors.New("empty space") //XXX
 	}
-	return &api.SpaceInfo{
-		Name:    spaceName,
-		MinTime: &first.Ts,
-		MaxTime: &last.Ts,
+	return &Info{
+		MinTime: first.Ts,
+		MaxTime: last.Ts,
 		Size:    info.Size(),
 	}, nil
 }
+
+//XXX mutex
+var infoCache = make(map[string]*Info)
 
 func HandleInfo(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -84,15 +113,20 @@ func HandleInfo(w http.ResponseWriter, r *http.Request) {
 	}
 	//XXX need to sanitize spaceName
 	spaceName := strings.Replace(r.URL.Path, "/space/", "", 1)
-	root := "."
-	path := filepath.Join(root, spaceName, "all.bzng")
-	// XXX this is slow.  can easily cache result rather than scanning
-	// whole file each time.
-	info, err := spaceInfo(spaceName, path)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+	info := infoCache[spaceName]
+	if info == nil {
+		var err error
+		info, err = Open(spaceName)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		infoCache[spaceName] = info
 	}
 	w.Header().Add("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(info)
+	json.NewEncoder(w).Encode(&api.SpaceInfo{
+		Size:    info.Size,
+		MinTime: &info.MinTime,
+		MaxTime: &info.MaxTime,
+	})
 }

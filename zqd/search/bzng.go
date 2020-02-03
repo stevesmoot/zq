@@ -31,10 +31,6 @@ func (r *bzngOutput) flush() {
 	r.response.(http.Flusher).Flush()
 }
 
-func (r *bzngOutput) Collect() interface{} {
-	return "TBD" //XXX
-}
-
 func (r *bzngOutput) SendBatch(cid int, batch zbuf.Batch) error {
 	for _, rec := range batch.Records() {
 		// XXX need to send channel id as control payload

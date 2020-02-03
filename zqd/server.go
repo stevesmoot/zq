@@ -7,9 +7,11 @@ import (
 	"github.com/mccanne/zq/zqd/space"
 )
 
+var UseTimeIndex bool
+
 func Run(port string) error {
 	http.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request) {
-		search.Handle(w, r)
+		search.Handle(w, r, UseTimeIndex)
 	})
 	http.HandleFunc("/space", func(w http.ResponseWriter, r *http.Request) {
 		space.HandleList(w, r)

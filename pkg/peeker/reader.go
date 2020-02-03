@@ -11,6 +11,7 @@ type Reader struct {
 	buffer []byte
 	cursor []byte
 	eof    bool
+	nread  uint64
 }
 
 var (
@@ -79,5 +80,10 @@ func (r *Reader) Read(n int) ([]byte, error) {
 		return nil, err
 	}
 	r.cursor = r.cursor[n:]
+	r.nread += uint64(n)
 	return b, nil
+}
+
+func (r *Reader) Position() uint64 {
+	return r.nread
 }
