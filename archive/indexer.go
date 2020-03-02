@@ -13,6 +13,8 @@ import (
 	"github.com/brimsec/zq/zng/resolver"
 )
 
+const zarExt = ".zar"
+
 // TBD
 type Indexer interface {
 	Create(*sst.Writer, zbuf.Reader)
@@ -28,7 +30,7 @@ func IndexDirTree(dir string) error {
 		}
 		name := info.Name()
 		if info.IsDir() {
-			if filepath.Ext(name) == ".zx" {
+			if filepath.Ext(name) == zarExt {
 				//XXX need to merge into or replace existing index
 				return filepath.SkipDir
 			}
@@ -53,7 +55,7 @@ func IndexDirTree(dir string) error {
 }
 
 func IndexLogFile(path string) error {
-	subdir := path + ".zx"
+	subdir := path + zarExt
 	sstName := "sst:type:ip"
 	sstPath := filepath.Join(subdir, sstName)
 	// XXX remove without warning, should have force flag
