@@ -53,6 +53,9 @@ func SearchFile(path string, pattern []byte) (bool, error) {
 	sstPath := filepath.Join(subdir, sstName)
 	finder, err := sst.NewFinder(sstPath)
 	if err != nil {
+		if err == os.ErrNotExist {
+			err = nil
+		}
 		return false, err
 	}
 	v, err := finder.Lookup(pattern)

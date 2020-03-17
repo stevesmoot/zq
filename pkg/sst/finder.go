@@ -30,6 +30,9 @@ func NewFinder(path string) (*Finder, error) {
 		level += 1
 		f.files = append(f.files, r)
 	}
+	if len(f.files) == 0 {
+		return nil, os.ErrNotExist
+	}
 	return f, nil
 }
 
