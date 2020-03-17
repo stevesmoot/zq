@@ -22,7 +22,7 @@ type Indexer interface {
 }
 
 //XXX this is a test stub that creates simple indexes of IP addresses
-func IndexDirTree(dir string) error {
+func CreateIndexes(dir string) error {
 	nerr := 0
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
