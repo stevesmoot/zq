@@ -75,6 +75,7 @@ func (c *Core) getTaskID() int64 {
 }
 
 func (c *Core) startIngest(space string) (cancelChan chan struct{}, ok bool) {
+	c.logger.Info("startIngest", zap.String("space", space))
 	c.ingestLock.Lock()
 	defer c.ingestLock.Unlock()
 
@@ -93,6 +94,7 @@ func (c *Core) startIngest(space string) (cancelChan chan struct{}, ok bool) {
 }
 
 func (c *Core) finishIngest(space string) {
+	c.logger.Info("finishIngest", zap.String("space", space))
 	c.ingestLock.Lock()
 	defer c.ingestLock.Unlock()
 	iws := c.ingests[space]
@@ -100,6 +102,7 @@ func (c *Core) finishIngest(space string) {
 }
 
 func (c *Core) startSpaceDelete(space string) {
+	c.logger.Info("startSpaceDelete", zap.String("space", space))
 	c.ingestLock.Lock()
 	iws, ok := c.ingests[space]
 	if !ok {
@@ -113,6 +116,7 @@ func (c *Core) startSpaceDelete(space string) {
 }
 
 func (c *Core) finishSpaceDelete(space string) {
+	c.logger.Info("finishSpaceDelete", zap.String("space", space))
 	c.ingestLock.Lock()
 	defer c.ingestLock.Unlock()
 	delete(c.ingests, space)
