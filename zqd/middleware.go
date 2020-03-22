@@ -78,7 +78,7 @@ func panicCatchMiddleware(logger *zap.Logger) mux.MiddlewareFunc {
 					return
 				}
 				rstr := fmt.Sprint(r)
-				logger.Error("panic", zap.String("error", rstr))
+				logger.DPanic("panic", zap.String("error", rstr))
 				http.Error(w, rstr, http.StatusInternalServerError)
 			}()
 

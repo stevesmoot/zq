@@ -1,6 +1,7 @@
 package zqd
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -211,11 +212,14 @@ func handleSpaceDelete(c *Core, w http.ResponseWriter, r *http.Request) {
 	if s == nil {
 		return
 	}
+	c.startSpaceDelete(s.Name())
+
 	if err := s.Delete(); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+	c.finishSpaceDelete(s.Name())
 }
 
 func handlePacketPost(c *Core, w http.ResponseWriter, r *http.Request) {
@@ -228,12 +232,24 @@ func handlePacketPost(c *Core, w http.ResponseWriter, r *http.Request) {
 	if s == nil {
 		return
 	}
+
 	var req api.PacketPostRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	proc, err := packet.IngestFile(r.Context(), s, req.Path, c.ZeekLauncher, c.SortLimit)
+
+	cancelChan, ok := c.startIngest(s.Name())
+	if !ok {
+		http.Error(w, "space is awaiting deletion", http.StatusConflict)
+		return
+	}
+	defer c.finishIngest(s.Name())
+
+	ctx, cancelFn := context.WithCancel(r.Context())
+	defer cancelFn()
+
+	proc, err := packet.IngestFile(ctx, s, req.Path, c.ZeekLauncher, c.SortLimit)
 	if err != nil {
 		if errors.Is(err, pcapio.ErrCorruptPcap) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -256,6 +272,8 @@ func handlePacketPost(c *Core, w http.ResponseWriter, r *http.Request) {
 	for {
 		var done bool
 		select {
+		case <-cancelChan:
+			cancelFn()
 		case <-proc.Done():
 			done = true
 		case <-proc.Snap():

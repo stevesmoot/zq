@@ -2,6 +2,7 @@ package zqd
 
 import (
 	"net/http"
+	"sync"
 	"sync/atomic"
 
 	"github.com/brimsec/zq/zqd/zeek"
@@ -36,6 +37,15 @@ type Core struct {
 	SortLimit int
 	taskCount int64
 	logger    *zap.Logger
+
+	ingestLock sync.Mutex
+	ingests    map[string]*ingestWaitState
+}
+
+type ingestWaitState struct {
+	deletePending bool
+	wg            sync.WaitGroup
+	cancelChan    chan struct{}
 }
 
 func NewCore(conf Config) *Core {
@@ -48,6 +58,7 @@ func NewCore(conf Config) *Core {
 		ZeekLauncher: conf.ZeekLauncher,
 		SortLimit:    conf.SortLimit,
 		logger:       logger,
+		ingests:      make(map[string]*ingestWaitState),
 	}
 }
 
@@ -61,4 +72,48 @@ func (c *Core) requestLogger(r *http.Request) *zap.Logger {
 
 func (c *Core) getTaskID() int64 {
 	return atomic.AddInt64(&c.taskCount, 1)
+}
+
+func (c *Core) startIngest(space string) (cancelChan chan struct{}, ok bool) {
+	c.ingestLock.Lock()
+	defer c.ingestLock.Unlock()
+
+	iws, ok := c.ingests[space]
+	if !ok {
+		iws = &ingestWaitState{
+			cancelChan: make(chan struct{}, 0),
+		}
+		c.ingests[space] = iws
+	}
+	if iws.deletePending {
+		return nil, false
+	}
+	iws.wg.Add(1)
+	return iws.cancelChan, true
+}
+
+func (c *Core) finishIngest(space string) {
+	c.ingestLock.Lock()
+	defer c.ingestLock.Unlock()
+	iws := c.ingests[space]
+	iws.wg.Done()
+}
+
+func (c *Core) startSpaceDelete(space string) {
+	c.ingestLock.Lock()
+	iws, ok := c.ingests[space]
+	if !ok {
+		c.ingestLock.Unlock()
+		return
+	}
+	iws.deletePending = true
+	close(iws.cancelChan)
+	c.ingestLock.Unlock()
+	iws.wg.Wait()
+}
+
+func (c *Core) finishSpaceDelete(space string) {
+	c.ingestLock.Lock()
+	defer c.ingestLock.Unlock()
+	delete(c.ingests, space)
 }
