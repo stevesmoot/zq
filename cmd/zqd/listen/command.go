@@ -77,7 +77,7 @@ func (c *Command) Run(args []string) error {
 		return err
 	}
 	c.conf.Logger = logger.Named("zqd")
-	if err := c.loadzeek(); err != nil {
+	if err := c.loadzeek(c.conf.Logger); err != nil {
 		return err
 	}
 	core := zqd.NewCore(c.conf)
@@ -135,8 +135,8 @@ func (c *Command) loadConfigFile() error {
 	return err
 }
 
-func (c *Command) loadzeek() error {
-	ln, err := zeek.LauncherFromPath(c.zeekpath)
+func (c *Command) loadzeek(logger *zap.Logger) error {
+	ln, err := zeek.LauncherFromPath(logger, c.zeekpath)
 	if err != nil && !errors.Is(err, zeek.ErrNotFound) {
 		return err
 	}

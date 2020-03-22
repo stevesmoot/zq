@@ -5,9 +5,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go.uber.org/zap"
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -41,7 +44,7 @@ type Launcher func(context.Context, io.Reader, string) (Process, error)
 // using the provided path to a zeek executable. If an empty string is provided,
 // this will attempt to load zeek from $PATH. If zeek cannot be found
 // ErrNotFound is returned.
-func LauncherFromPath(zeekpath string) (Launcher, error) {
+func LauncherFromPath(logger *zap.Logger, zeekpath string) (Launcher, error) {
 	if zeekpath == "" {
 		zeekpath = "zeek"
 	}
@@ -53,7 +56,10 @@ func LauncherFromPath(zeekpath string) (Launcher, error) {
 		return nil, fmt.Errorf("zeek path error: %w", err)
 	}
 	return func(ctx context.Context, r io.Reader, dir string) (Process, error) {
-		p := newProcess(ctx, r, zeekpath, dir)
+		p, err := newProcess(ctx, logger, r, zeekpath, dir)
+		if err != nil {
+			return nil, err
+		}
 		return p, p.start()
 	}, nil
 }
@@ -63,14 +69,47 @@ type process struct {
 	stderrBuf *bytes.Buffer
 }
 
-func newProcess(ctx context.Context, pcap io.Reader, zeekpath, outdir string) *process {
+func windowsZeekPathEnv(zeekpath string) (string, error) {
+	topDir, err := filepath.Abs(filepath.Join(filepath.Dir(zeekpath), ".."))
+	if err != nil {
+		return "", err
+	}
+
+	var scriptLocations = []string{
+		"share/zeek",
+		"share/zeek/policy",
+		"share/zeek/site",
+	}
+
+	var paths []string
+	for _, l := range scriptLocations {
+		p := filepath.Join(topDir, filepath.FromSlash(l))
+		vol := filepath.VolumeName(p)
+		cyg := "/cygdrive/" + vol[0:1] + filepath.ToSlash(p[len(vol):])
+		paths = append(paths, cyg)
+	}
+
+	return "ZEEKPATH=" + strings.Join(paths, ":"), nil
+}
+
+func newProcess(ctx context.Context, logger *zap.Logger, pcap io.Reader, zeekpath, outdir string) (*process, error) {
 	cmd := exec.CommandContext(ctx, zeekpath, "-C", "-r", "-", "--exec", ExecScript, "local")
 	cmd.Dir = outdir
 	cmd.Stdin = pcap
+
+	if runtime.GOOS == "windows" {
+		zeekPathEnv, err := windowsZeekPathEnv(zeekpath)
+		if err != nil {
+			return nil, err
+		}
+		cmd.Env = append(os.Environ(), zeekPathEnv)
+		logger.Error("alfred: windows env is", zap.String("env", zeekPathEnv))
+	}
+
 	p := &process{cmd: cmd, stderrBuf: bytes.NewBuffer(nil)}
 	// Capture stderr for error reporting.
 	cmd.Stderr = p.stderrBuf
-	return p
+	return p, nil
 }
 
 func (p *process) wrapError(err error) error {
