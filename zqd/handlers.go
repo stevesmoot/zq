@@ -239,6 +239,9 @@ func handlePacketPost(c *Core, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ctx, cancelFn := context.WithCancel(r.Context())
+	defer cancelFn()
+
 	cancelChan, ok := c.startIngest(s.Name())
 	if !ok {
 		http.Error(w, "space is awaiting deletion", http.StatusConflict)
@@ -246,8 +249,16 @@ func handlePacketPost(c *Core, w http.ResponseWriter, r *http.Request) {
 	}
 	defer c.finishIngest(s.Name())
 
-	ctx, cancelFn := context.WithCancel(r.Context())
-	defer cancelFn()
+	go func() {
+		select {
+		case <-ctx.Done():
+			return
+		case <-cancelChan:
+			logger.Warn("packetIngest: got cancel")
+			cancelFn()
+			return
+		}
+	}()
 
 	proc, err := packet.IngestFile(ctx, s, req.Path, c.ZeekLauncher, c.SortLimit)
 	if err != nil {
@@ -272,8 +283,6 @@ func handlePacketPost(c *Core, w http.ResponseWriter, r *http.Request) {
 	for {
 		var done bool
 		select {
-		case <-cancelChan:
-			cancelFn()
 		case <-proc.Done():
 			done = true
 		case <-proc.Snap():
@@ -301,6 +310,7 @@ func handlePacketPost(c *Core, w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
+	logger.Warn("packetIngest: alfred: ingest handler loop stopped")
 	taskEnd := api.TaskEnd{Type: "TaskEnd", TaskID: taskID}
 	if err := proc.Err(); err != nil {
 		var ok bool
