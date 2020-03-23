@@ -234,18 +234,18 @@ func handlePacketPost(c *Core, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req api.PacketPostRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	ctx, ingestDone, ok := c.startSpaceIngest(ctx, s.Name())
+	ctx, ingestDone, ok := c.startSpaceIngest(r.Context(), s.Name())
 	if !ok {
 		http.Error(w, "space is awaiting deletion", http.StatusConflict)
 		return
 	}
 	defer ingestDone()
+
+	var req api.PacketPostRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	proc, err := packet.IngestFile(ctx, s, req.Path, c.ZeekLauncher, c.SortLimit)
 	if err != nil {
