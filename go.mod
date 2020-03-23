@@ -3,6 +3,7 @@ module github.com/brimsec/zq
 go 1.13
 
 require (
+	github.com/RoaringBitmap/roaring v0.4.21
 	github.com/axiomhq/hyperloglog v0.0.0-20191112132149-a4c4c47bc57f
 	github.com/buger/jsonparser v0.0.0-20191004114745-ee4c978eae7e
 	github.com/google/gopacket v1.1.17

@@ -31,7 +31,7 @@ func Find(dir string, pattern []byte) ([]string, error) {
 		if filepath.Ext(name) == ".bzng" {
 			hit, err := SearchFile(path, pattern)
 			if err != nil {
-				fmt.Printf("%s: %s\n", path, err)
+				fmt.Printf("%s\n", err)
 				nerr++
 				if nerr > 10 {
 					//XXX
@@ -49,15 +49,20 @@ func Find(dir string, pattern []byte) ([]string, error) {
 
 func SearchFile(path string, pattern []byte) (bool, error) {
 	subdir := path + zarExt
-	sstName := "sst:type:ip"
+	sstName := "sst:type:ip" //XXX
 	sstPath := filepath.Join(subdir, sstName)
 	finder, err := sst.NewFinder(sstPath)
 	if err != nil {
 		if err == os.ErrNotExist {
 			err = nil
+		} else {
+			err = fmt.Errorf("%s: %s", sstPath, err)
 		}
 		return false, err
 	}
 	v, err := finder.Lookup(pattern)
+	if err != nil {
+		err = fmt.Errorf("%s: %s", sstPath, err.Error())
+	}
 	return v != nil, err
 }
