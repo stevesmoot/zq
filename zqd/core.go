@@ -1,6 +1,7 @@
 package zqd
 
 import (
+	"context"
 	"net/http"
 	"sync"
 	"sync/atomic"
@@ -38,13 +39,18 @@ type Core struct {
 	taskCount int64
 	logger    *zap.Logger
 
+	// ingestLock protects the ingests map and the deletePending
+	// field inside the ingestWaitState's.
 	ingestLock sync.Mutex
 	ingests    map[string]*ingestWaitState
 }
 
 type ingestWaitState struct {
-	deletePending bool
+	// >0 if a delete request is active
+	deletePending int
+	// WaitGroup for active ingests
 	wg            sync.WaitGroup
+	// closed to signal current ingests should terminate
 	cancelChan    chan struct{}
 }
 
@@ -74,8 +80,9 @@ func (c *Core) getTaskID() int64 {
 	return atomic.AddInt64(&c.taskCount, 1)
 }
 
-func (c *Core) startIngest(space string) (cancelChan chan struct{}, ok bool) {
-	c.logger.Info("startIngest", zap.String("space", space))
+func (c *Core) startSpaceIngest(ctx context.Context, space string) (context.Context, func(), bool) {
+	c.logger.Info("startSpaceIngest", zap.String("space", space))
+
 	c.ingestLock.Lock()
 	defer c.ingestLock.Unlock()
 
@@ -86,38 +93,56 @@ func (c *Core) startIngest(space string) (cancelChan chan struct{}, ok bool) {
 		}
 		c.ingests[space] = iws
 	}
-	if iws.deletePending {
-		return nil, false
+	if iws.deletePending > 0 {
+		return ctx, func() {}, false
 	}
+
+	ctx, cancel := context.WithCancel(ctx)
 	iws.wg.Add(1)
-	return iws.cancelChan, true
+	ingestDone := func() {
+		iws.wg.Done()
+		cancel()
+	}
+
+	go func() {
+		select {
+		case <-ctx.Done():
+		case <-iws.cancelChan:
+			cancel()
+		}
+	}()
+
+	return ctx, ingestDone, true
 }
 
-func (c *Core) finishIngest(space string) {
-	c.logger.Info("finishIngest", zap.String("space", space))
-	c.ingestLock.Lock()
-	defer c.ingestLock.Unlock()
-	iws := c.ingests[space]
-	iws.wg.Done()
-}
-
-func (c *Core) startSpaceDelete(space string) {
+func (c *Core) startSpaceDelete(space string) func() {
 	c.logger.Info("startSpaceDelete", zap.String("space", space))
+
 	c.ingestLock.Lock()
+
 	iws, ok := c.ingests[space]
 	if !ok {
-		c.ingestLock.Unlock()
-		return
+		iws = &ingestWaitState{
+			cancelChan: make(chan struct{}, 0),
+		}
+		c.ingests[space] = iws
 	}
-	iws.deletePending = true
-	close(iws.cancelChan)
+	if iws.deletePending == 0 {
+		close(iws.cancelChan)
+	}
+	iws.deletePending++
+
 	c.ingestLock.Unlock()
+
 	iws.wg.Wait()
+
+	return func() {
+		c.ingestLock.Lock()
+		defer c.ingestLock.Unlock()
+		iws.deletePending--
+		if iws.deletePending == 0 {
+			delete(c.ingests, space)
+		}
+	}
 }
 
-func (c *Core) finishSpaceDelete(space string) {
-	c.logger.Info("finishSpaceDelete", zap.String("space", space))
-	c.ingestLock.Lock()
-	defer c.ingestLock.Unlock()
-	delete(c.ingests, space)
-}

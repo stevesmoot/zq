@@ -1,7 +1,6 @@
 package zqd
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -212,14 +211,14 @@ func handleSpaceDelete(c *Core, w http.ResponseWriter, r *http.Request) {
 	if s == nil {
 		return
 	}
-	c.startSpaceDelete(s.Name())
+	deleteDone := c.startSpaceDelete(s.Name())
+	defer deleteDone()
 
 	if err := s.Delete(); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
-	c.finishSpaceDelete(s.Name())
 }
 
 func handlePacketPost(c *Core, w http.ResponseWriter, r *http.Request) {
@@ -228,6 +227,8 @@ func handlePacketPost(c *Core, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	logger := c.requestLogger(r)
+	ctx := r.Context()
+
 	s := extractSpace(c, w, r)
 	if s == nil {
 		return
@@ -239,26 +240,12 @@ func handlePacketPost(c *Core, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancelFn := context.WithCancel(r.Context())
-	defer cancelFn()
-
-	cancelChan, ok := c.startIngest(s.Name())
+	ctx, ingestDone, ok := c.startSpaceIngest(ctx, s.Name())
 	if !ok {
 		http.Error(w, "space is awaiting deletion", http.StatusConflict)
 		return
 	}
-	defer c.finishIngest(s.Name())
-
-	go func() {
-		select {
-		case <-ctx.Done():
-			return
-		case <-cancelChan:
-			logger.Warn("packetIngest: got cancel")
-			cancelFn()
-			return
-		}
-	}()
+	defer ingestDone()
 
 	proc, err := packet.IngestFile(ctx, s, req.Path, c.ZeekLauncher, c.SortLimit)
 	if err != nil {
