@@ -74,12 +74,13 @@ type typeRules struct {
 	rules       []Rule
 }
 
-// SetTypeConfig adds a TypeConfig to the reader. Its use is optional,
-// but if used, it should be called before records are processed.  In
-// the absence of a TypeConfig, records are all parsed with the
+// ConfigureTypes adds a TypeConfig to the reader. Its should be
+// called before input lines are processed. If a non-empty defaultPath
+// is passed, it is used for json objects without a _path.
+// In the absence of a TypeConfig, records are all parsed with the
 // inferParser. If a TypeConfig is present, records are parsed
 // with the typeParser.
-func (r *Reader) SetTypeConfig(tc TypeConfig) error {
+func (r *Reader) ConfigureTypes(tc TypeConfig, defaultPath string) error {
 	tr := typeRules{
 		descriptors: make(map[string]*zng.TypeRecord),
 		rules:       tc.Rules,
@@ -105,6 +106,7 @@ func (r *Reader) SetTypeConfig(tc TypeConfig) error {
 		tr:            tr,
 		stats:         r.stats.typeStats,
 		typeInfoCache: make(map[int]*typeInfo),
+		defaultPath:   defaultPath,
 	}
 	return nil
 }
